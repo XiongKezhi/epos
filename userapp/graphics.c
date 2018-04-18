@@ -671,7 +671,7 @@ void drawLinesFromBottom(int ar[], int num, int X_Location, int Y_Location)
     int startPoint_X = X_Location * BLOCK_WIDTH;
     int startPoint_Y = (Y_Location + 1) * BLOCK_HIGHT;
 
-    int endPoint_X = (X_Location + 1) * BLOCK_WIDTH;
+    int endPoint_X = startPoint_X + BLOCK_WIDTH;
     int endPoint_Y = startPoint_Y;
 
     // refreshArea(startPoint_X, startPoint_Y, endPoint_X, endPoint_Y + BLOCK_HIGHT, 0x000000);
@@ -679,6 +679,6 @@ void drawLinesFromBottom(int ar[], int num, int X_Location, int Y_Location)
     {
         // 转换rgb值
         // rgb_struct rgb = Hue2rgb(ar[k]);
-        line(startPoint_X, startPoint_Y - k, startPoint_X + BLOCK_WIDTH, endPoint_Y - k, 0xffffff);
+        line(startPoint_X, startPoint_Y - k, endPoint_X, endPoint_Y - k, 0xffffff);
     }
 }

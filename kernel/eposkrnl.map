@@ -695,7 +695,7 @@ OUTPUT(eposkrnl.out elf32-i386)
  .debug_line    0x000000000000258e      0x2d2 ../lib/snprintf.o
  .debug_line    0x0000000000002860      0x4dc ../lib/tlsf/tlsf.o
 
-.debug_str      0x0000000000000000     0x2131
+.debug_str      0x0000000000000000     0x214a
  .debug_str     0x0000000000000000      0x29a ide.o
                                         0x30c (松开之前的大小)
  .debug_str     0x000000000000029a        0x9 floppy.o
@@ -710,41 +710,41 @@ OUTPUT(eposkrnl.out elf32-i386)
                                         0x37c (松开之前的大小)
  .debug_str     0x00000000000006b4      0x790 machdep.o
                                         0xab9 (松开之前的大小)
- .debug_str     0x0000000000000e44       0x74 task.o
-                                        0x33d (松开之前的大小)
- .debug_str     0x0000000000000eb8        0xf mktime.o
+ .debug_str     0x0000000000000e44       0x8d task.o
+                                        0x321 (松开之前的大小)
+ .debug_str     0x0000000000000ed1        0xf mktime.o
                                         0x18f (松开之前的大小)
- .debug_str     0x0000000000000ec7       0x1b sem.o
+ .debug_str     0x0000000000000ee0       0x1b sem.o
                                         0x17d (松开之前的大小)
- .debug_str     0x0000000000000ee2       0x52 page.o
+ .debug_str     0x0000000000000efb       0x52 page.o
                                         0x28f (松开之前的大小)
- .debug_str     0x0000000000000f34      0x14c startup.o
+ .debug_str     0x0000000000000f4d      0x14c startup.o
                                         0x458 (松开之前的大小)
- .debug_str     0x0000000000001080       0x84 frame.o
+ .debug_str     0x0000000000001099       0x84 frame.o
                                         0x24f (松开之前的大小)
- .debug_str     0x0000000000001104       0x70 kmalloc.o
+ .debug_str     0x000000000000111d       0x70 kmalloc.o
                                         0x210 (松开之前的大小)
- .debug_str     0x0000000000001174      0x5e1 dosfs.o
+ .debug_str     0x000000000000118d      0x5e1 dosfs.o
                                         0x915 (松开之前的大小)
- .debug_str     0x0000000000001755        0x5 pe.o
+ .debug_str     0x000000000000176e        0x5 pe.o
                                          0xec (松开之前的大小)
- .debug_str     0x000000000000175a      0x111 elf.o
+ .debug_str     0x0000000000001773      0x111 elf.o
                                         0x412 (松开之前的大小)
- .debug_str     0x000000000000186b       0x2a printk.o
+ .debug_str     0x0000000000001884       0x2a printk.o
                                         0x1ac (松开之前的大小)
- .debug_str     0x0000000000001895       0xf2 bitmap.o
+ .debug_str     0x00000000000018ae       0xf2 bitmap.o
                                         0x2eb (松开之前的大小)
- .debug_str     0x0000000000001987       0x57 ../lib/softfloat.o
+ .debug_str     0x00000000000019a0       0x57 ../lib/softfloat.o
                                         0x1bd (松开之前的大小)
- .debug_str     0x00000000000019de       0x55 ../lib/string.o
+ .debug_str     0x00000000000019f7       0x55 ../lib/string.o
                                         0x1c1 (松开之前的大小)
- .debug_str     0x0000000000001a33       0x47 ../lib/memcpy.o
+ .debug_str     0x0000000000001a4c       0x47 ../lib/memcpy.o
                                         0x1aa (松开之前的大小)
- .debug_str     0x0000000000001a7a       0x15 ../lib/memset.o
+ .debug_str     0x0000000000001a93       0x15 ../lib/memset.o
                                         0x194 (松开之前的大小)
- .debug_str     0x0000000000001a8f       0x93 ../lib/snprintf.o
+ .debug_str     0x0000000000001aa8       0x93 ../lib/snprintf.o
                                         0x24b (松开之前的大小)
- .debug_str     0x0000000000001b22      0x60f ../lib/tlsf/tlsf.o
+ .debug_str     0x0000000000001b3b      0x60f ../lib/tlsf/tlsf.o
                                         0x831 (松开之前的大小)
 
 .comment        0x0000000000000000       0x34

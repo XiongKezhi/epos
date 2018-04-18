@@ -17,9 +17,10 @@
 extern void *tlsf_create_with_pool(void* mem, size_t bytes);
 extern void *g_heap;
 
-// 实验
+// 实验运行
 void Lab1_Go();
 void Lab2_Go();
+void Lab3_Go();
 
 /**
  * GCC insists on __main
@@ -42,6 +43,95 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
+    Lab3_Go();
+
+    while (1)
+        ;
+    task_exit(0);
+}
+
+// 实验一 系统时间调用函数
+void Lab1_Go()
+{
+    // 分配内存测试
+    time_t *loc = (time_t *)malloc(sizeof(time_t));
+    long NonNULL_time = time(loc);
+    printf("\nNonNULL case : the seconds since Greenwich time is %ld Loc:%ld\n", 
+        NonNULL_time, *loc);
+    free(loc);
+    loc = NULL;
+
+    // 不分配内存测试
+    long NULL_time = time(NULL);      
+    printf("NULL case : the seconds since Greenwich time is %ld\n", NULL_time);
+}
+
+// 实验二 线程的创建
+void Lab2_Go()
+{
+    // 屏幕尺寸可更换
+    // list_graphic_modes();
+    init_graphic(0x0192);
+
+    // 设置各排序函数参数
+    // (排序函数地址， 是否色彩排序， X轴分块位置， Y轴分块位置)
+    sortAttributes *bubbleAttr = attrGenerator(&bubbleSort, 0, 0, 0);
+    sortAttributes *selectAttr = attrGenerator(&selectSort, 0, 1, 0);
+    sortAttributes *insertAttr = attrGenerator(&insertSort, 0, 2, 0);
+    sortAttributes *quickAttr  = attrGenerator(&quickSort, 0, 1, 2);
+    
+    sortAttributes *mergeColorAttr = attrGenerator(&mergeSort, 1, 0, 1);
+    sortAttributes *quickColorAttr = attrGenerator(&quickSort, 1, 1, 1);
+    sortAttributes *shellColorAttr = attrGenerator(&shellSort, 1, 2, 1);
+    sortAttributes *bubbleColorAttr= attrGenerator(&bubbleSort, 1, 2, 2);
+    sortAttributes *insertColorAttr  = attrGenerator(&insertSort, 1, 0, 2);
+
+    // 运行各排序
+    int tid_quick  = sortThreadRun(quickAttr);
+    int tid_bubble = sortThreadRun(bubbleAttr);
+    int tid_select = sortThreadRun(selectAttr);
+    int tid_insert = sortThreadRun(insertAttr);
+
+    int tid_insertColor= sortThreadRun(insertColorAttr);
+    int tid_mergeColor = sortThreadRun(mergeColorAttr);
+    int tid_quickColor = sortThreadRun(quickColorAttr);
+    int tid_shellColor = sortThreadRun(shellColorAttr);
+    int tid_bubbleColor= sortThreadRun(bubbleColorAttr);
+
+    // 等待结束
+    task_wait(tid_quick, NULL);
+    task_wait(tid_bubble, NULL);
+    task_wait(tid_select, NULL);
+    task_wait(tid_insert, NULL);
+    
+    task_wait(tid_insertColor, NULL);
+    task_wait(tid_mergeColor, NULL);
+    task_wait(tid_quickColor, NULL);
+    task_wait(tid_shellColor, NULL);
+    task_wait(tid_bubbleColor, NULL);
+
+    // 释放资源
+    sortFree(quickAttr);
+    sortFree(bubbleAttr);
+    sortFree(selectAttr);
+    sortFree(insertAttr);
+    
+    sortFree(insertColorAttr);
+    sortFree(mergeColorAttr);
+    sortFree(quickColorAttr);
+    sortFree(shellColorAttr);
+    sortFree(bubbleColorAttr);
+
+    sleep(100);
+    // refreshAll(0x000000);
+    exit_graphic();
+    printf("exited!");
+}
+
+// 实验三 线程调度
+// 需要将graphic.h中的X_DIVISION和Y_DIVISION宏定义更改为3和1
+void Lab3_Go()
+{
     init_graphic(0x0180);
 
     sortAttributes *bubbleAttr_left = attrGenerator(&bubbleSort, 0, 0, 0);
@@ -130,86 +220,4 @@ void main(void *pv)
 
     bubbleAttr_left = NULL;
     bubbleAttr_right = NULL;
-
-    while (1)
-        ;
-    task_exit(0);
-}
-
-// 实验一 系统时间调用函数
-void Lab1_Go()
-{
-    // 分配内存测试
-    time_t *loc = (time_t *)malloc(sizeof(time_t));
-    long NonNULL_time = time(loc);
-    printf("\nNonNULL case : the seconds since Greenwich time is %ld Loc:%ld\n", 
-        NonNULL_time, *loc);
-    free(loc);
-    loc = NULL;
-
-    // 不分配内存测试
-    long NULL_time = time(NULL);      
-    printf("NULL case : the seconds since Greenwich time is %ld\n", NULL_time);
-}
-
-// 实验二：线程的创建
-void Lab2_Go()
-{
-    // 屏幕尺寸可更换
-    // list_graphic_modes();
-    init_graphic(0x0192);
-
-    // 设置各排序函数参数
-    // (排序函数地址， 是否色彩排序， X轴分块位置， Y轴分块位置)
-    sortAttributes *bubbleAttr = attrGenerator(&bubbleSort, 0, 0, 0);
-    sortAttributes *selectAttr = attrGenerator(&selectSort, 0, 1, 0);
-    sortAttributes *insertAttr = attrGenerator(&insertSort, 0, 2, 0);
-    sortAttributes *quickAttr  = attrGenerator(&quickSort, 0, 1, 2);
-    
-    sortAttributes *mergeColorAttr = attrGenerator(&mergeSort, 1, 0, 1);
-    sortAttributes *quickColorAttr = attrGenerator(&quickSort, 1, 1, 1);
-    sortAttributes *shellColorAttr = attrGenerator(&shellSort, 1, 2, 1);
-    sortAttributes *bubbleColorAttr= attrGenerator(&bubbleSort, 1, 2, 2);
-    sortAttributes *insertColorAttr  = attrGenerator(&insertSort, 1, 0, 2);
-
-    // 运行各排序
-    int tid_quick  = sortThreadRun(quickAttr);
-    int tid_bubble = sortThreadRun(bubbleAttr);
-    int tid_select = sortThreadRun(selectAttr);
-    int tid_insert = sortThreadRun(insertAttr);
-
-    int tid_insertColor= sortThreadRun(insertColorAttr);
-    int tid_mergeColor = sortThreadRun(mergeColorAttr);
-    int tid_quickColor = sortThreadRun(quickColorAttr);
-    int tid_shellColor = sortThreadRun(shellColorAttr);
-    int tid_bubbleColor= sortThreadRun(bubbleColorAttr);
-
-    // 等待结束
-    task_wait(tid_quick, NULL);
-    task_wait(tid_bubble, NULL);
-    task_wait(tid_select, NULL);
-    task_wait(tid_insert, NULL);
-    
-    task_wait(tid_insertColor, NULL);
-    task_wait(tid_mergeColor, NULL);
-    task_wait(tid_quickColor, NULL);
-    task_wait(tid_shellColor, NULL);
-    task_wait(tid_bubbleColor, NULL);
-
-    // 释放资源
-    sortFree(quickAttr);
-    sortFree(bubbleAttr);
-    sortFree(selectAttr);
-    sortFree(insertAttr);
-    
-    sortFree(insertColorAttr);
-    sortFree(mergeColorAttr);
-    sortFree(quickColorAttr);
-    sortFree(shellColorAttr);
-    sortFree(bubbleColorAttr);
-
-    sleep(100);
-    // refreshAll(0x000000);
-    exit_graphic();
-    printf("exited!");
 }
