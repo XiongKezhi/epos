@@ -24,14 +24,15 @@
 #include <inttypes.h>
 #include <time.h>
 #include "machdep.h"
+#include "fixedptc.h"
 
 /*中断向量表*/
 extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
 
-/*让中断控制器打开某个中断*/
+/*让中断控制器关闭某个中断*/
 void disable_irq(uint32_t irq);
 
-/*让中断控制器关闭某个中断*/
+/*让中断控制器打开某个中断*/
 void enable_irq(uint32_t irq);
 
 /*定时器以HZ的频率中断CPU*/
@@ -75,6 +76,7 @@ struct tcb {
     uint32_t    kstack;      /*saved top of the kernel stack for this task*/
 
     int         tid;         /* task id */
+
     int         state;       /* -1:waiting,0:running,1:ready,2:zombie */
 #define TASK_STATE_WAITING  -1
 #define TASK_STATE_READY     1
@@ -83,11 +85,17 @@ struct tcb {
     int         timeslice;   //时间片
 #define TASK_TIMESLICE_DEFAULT 4
 
-    int         code_exit;   //保存该线程的退出代码
+    int         code_exit;      //保存该线程的退出代码
     struct wait_queue *wq_exit; //等待该线程退出的队列
 
     struct tcb  *next;
     struct fpu   fpu;        //数学协处理器的寄存器
+
+#define NZERO 20
+    int nice;   //静态优先级
+
+    fixedpt estcpu;     //线程使用的时间
+    int priority;   //线程动态优先级
 
     uint32_t     signature;  //必须是最后一个字段
 #define TASK_SIGNATURE 0x20160201
@@ -163,6 +171,7 @@ void        sys_task_exit(int code_exit);
 int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
+struct tcb *get_task(int tid);
 
 int printk(const char *fmt,...);
 
@@ -191,4 +200,12 @@ unsigned sys_sleep(unsigned seconds);
 int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 
 void     mi_startup();
+
+// 实验一 时钟
+time_t sys_time();
+
+// 实验二 线程调度
+int sys_get_priority(int tid);
+int sys_set_priority(int tid, int prio);
+
 #endif /*_KERNEL_H*/

@@ -111,7 +111,6 @@ void start_user_task()
     printk("Done\r\n");
 
     vm86_init();          //初始化8086模拟器
-    e1000_init();         //初始化E1000网卡
 
     /*
      * 初始化FAT文件系统

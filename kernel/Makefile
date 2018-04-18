@@ -14,7 +14,7 @@ CFLAGS=	-m32 -Wall \
 LDFLAGS=-m32 -Tkernel.ld -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map
 
-COBJS=	ide.o floppy.o e1000.o pci.o vm86.o \
+COBJS=	ide.o floppy.o pci.o vm86.o \
 	kbd.o timer.o machdep.o task.o mktime.o sem.o \
 	page.o startup.o frame.o kmalloc.o dosfs.o pe.o \
 	elf.o printk.o bitmap.o

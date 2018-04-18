@@ -455,9 +455,9 @@ void setPixel(int x, int y, COLORREF cr)
             g_graphic_dev.pfnSwitchBank(HIWORD(addr));
         }
         *((uint32_t *)p) = (uint32_t)((getAValue(cr)<<24) |
-                                      (getRValue(cr)<<16) |
+                                      (getBValue(cr)<<16) |
                                       (getGValue(cr)<< 8) |
-                                      (getBValue(cr)<< 0));
+                                      (getRValue(cr)<< 0));
         break;
     }
 }
@@ -551,3 +551,134 @@ void line(int x1,int y1,int x2,int y2, COLORREF cr)
     }
 }
 
+void refreshArea(int x1, int y1, int x2, int y2, COLORREF cr)
+{
+    // exit_graphic();
+    // sleep(100);
+    for (int i = y1; i <= y2; ++i)
+        line(x1, i, x2, i, cr);
+}
+
+void refreshAll(COLORREF cr)
+{
+    refreshArea(0, 0, g_graphic_dev.XResolution, g_graphic_dev.YResolution, cr);
+}
+
+int rgb2Hue(rgb_struct rgb)
+{
+    float hsb[3];
+    int maxIndex = 0, minIndex = 0;
+
+    //将rgb的值从小到大排列，存在ranged数组里
+    int rangedRGB[3];
+    rangedRGB[0] = (int)minRGB((float)rgb.ri, (float)rgb.gi, (float)rgb.bi);
+    rangedRGB[2] = (int)maxRGB((float)rgb.ri, (float)rgb.gi, (float)rgb.bi);
+    rangedRGB[1] = rgb.ri + rgb.gi + rgb.bi - rangedRGB[0] - rangedRGB[2];
+
+    //rgb的索引分别为0、1、2，maxIndex和minIndex用于存储rgb中最大最小值的下标
+    if(rangedRGB[0] == rgb.ri)
+        minIndex = 0;
+    else if(rangedRGB[0] == rgb.gi)
+        minIndex = 1;
+    else
+        minIndex = 2;
+
+    if(rangedRGB[2] == rgb.ri)
+        maxIndex = 0;
+    else if(rangedRGB[2] == rgb.gi)
+        maxIndex = 1;
+    else
+        maxIndex = 2;
+
+    //算出亮度
+    hsb[2] = rangedRGB[2] / 255.0f;
+    //算出饱和度
+    hsb[1]=1-rangedRGB[0]/rangedRGB[2];
+    //算出色相
+    hsb[0]=maxIndex*120+60* (rangedRGB[1]/hsb[1]/rangedRGB[2]+(1-1/hsb[1])) *((maxIndex-minIndex+3)%3==1?1:-1);
+    //防止色相为负值
+    hsb[0] = ((int)hsb[0] + 360) % 360;
+    return (int)hsb[0];
+}
+
+rgb_struct Hue2rgb(int hue)
+{
+    // 色环一圈360度
+    hue = hue % 360;
+    // 色相和RGB折线图的斜率
+    float slope = 255.0 / 60;
+    // 三个色值
+    int ri, gi, bi;
+
+    // 根据色相和rgb折线图
+    if(hue <= 60)
+    {
+        ri = 255;
+        gi = slope * hue;
+        bi = 0;
+    }
+    else if(hue <= 120)
+    {
+        ri = 255 - slope * (hue - 60);
+        gi = 255;
+        bi = 0;
+    }
+    else if(hue <= 180)
+    {
+        ri = 0;
+        gi = 255;
+        bi = slope * (hue - 120);
+    }
+    else if(hue <= 240)
+    {
+        ri = 0;
+        gi = 255 - (hue - 180) * slope;
+        bi = 255;
+    }
+    else if(hue <= 300)
+    {
+        ri = (hue - 240) * slope;
+        gi = 0;
+        bi = 255;
+    }
+    else if(hue <= 360)
+    {
+        ri = 255;
+        gi = 0;
+        bi = 255 - (hue - 300) * slope;
+    }
+
+    rgb_struct rgb;
+    rgb.ri=ri;
+    rgb.gi=gi;
+    rgb.bi=bi;
+
+    return rgb;
+}
+
+float maxRGB(float r, float g, float b)
+{
+    return (r > g ? r : g) > b ? (r > g ? r : g) : b;
+}
+
+float minRGB(float r, float g, float b)
+{
+    return (r < g ? r : g) < b ? (r < g ? r : g) : b;
+}
+
+void drawLinesFromBottom(int ar[], int num, int X_Location, int Y_Location)
+{
+    int startPoint_X = X_Location * BLOCK_WIDTH;
+    int startPoint_Y = (Y_Location + 1) * BLOCK_HIGHT;
+
+    int endPoint_X = (X_Location + 1) * BLOCK_WIDTH;
+    int endPoint_Y = startPoint_Y;
+
+    // refreshArea(startPoint_X, startPoint_Y, endPoint_X, endPoint_Y + BLOCK_HIGHT, 0x000000);
+    for (int k = 0; k < num; ++k)
+    {
+        // 转换rgb值
+        // rgb_struct rgb = Hue2rgb(ar[k]);
+        line(startPoint_X, startPoint_Y - k, startPoint_X + BLOCK_WIDTH, endPoint_Y - k, 0xffffff);
+    }
+}

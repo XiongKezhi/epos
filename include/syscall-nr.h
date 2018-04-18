@@ -40,4 +40,11 @@
 #define SYSCALL_putchar       1000
 #define SYSCALL_getchar       1001
 
+// 实验一 定义系统调用的号码
+#define SYSCALL_time          2016
+
+// 实验二
+#define SYSCALL_get_priority  2017
+#define SYSCALL_set_priority  2018
+
 #endif /*_SYSCALLNR_H*/

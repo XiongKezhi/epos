@@ -20,9 +20,13 @@
 #include <stddef.h>
 #include <time.h>
 #include "kernel.h"
+#include "fixedptc.h"
 
 /*记录系统启动以来，定时器中断的次数*/
 unsigned volatile g_timer_ticks = 0;
+
+// 系统的平均负载
+fixedpt g_load_avg = 0;
 
 /**
  * 定时器的中断处理程序
@@ -30,7 +34,38 @@ unsigned volatile g_timer_ticks = 0;
 void isr_timer(uint32_t irq, struct context *ctx)
 {
     g_timer_ticks++;
-    //sys_putchar('.');
+    // sys_putchar('.');
+    
+    // 每秒更新所有的线程状态
+    if(g_timer_ticks % HZ == 0)
+    {
+        // printk("timer ticks: %d\n", g_timer_ticks);
+
+        fixedpt ratio;
+        unsigned readyCnt = 0;
+
+        // 统计ready状态的线程数量
+        for (struct tcb *tsk = g_task_head; tsk != NULL; tsk =tsk->next)
+            if(tsk->state == TASK_STATE_READY && tsk->tid != 0)
+                readyCnt++;
+
+        // 计算平均负载
+        fixedpt r59_60 = fixedpt_div(fixedpt_fromint(59), fixedpt_fromint(60));
+        fixedpt r01_60 = fixedpt_div(FIXEDPT_ONE,         fixedpt_fromint(60));
+        g_load_avg = fixedpt_add(fixedpt_mul(r59_60, g_load_avg),
+                                 fixedpt_mul(r01_60, fixedpt_fromint(readyCnt)));
+
+        // 更新所有线程的CPU时间
+        for (struct tcb *tsk = g_task_head; tsk != NULL; tsk = tsk->next)
+        {
+            ratio = fixedpt_mul(FIXEDPT_TWO, g_load_avg);
+            ratio = fixedpt_div(ratio, fixedpt_add(ratio, FIXEDPT_ONE));
+            tsk->estcpu = fixedpt_add(fixedpt_mul(ratio, tsk->estcpu), fixedpt_fromint(tsk->nice));
+            // printk("task #%d : %d\n", tsk->tid, tsk->state);
+        }
+
+        // printk("read count : %d\n\n", readyCnt);
+    }
 
     if(g_task_running != NULL) {
         //如果是task0在运行，则强制调度
@@ -39,8 +74,14 @@ void isr_timer(uint32_t irq, struct context *ctx)
         } else {
             //否则，把当前线程的时间片减一
             --g_task_running->timeslice;
+            
+            // 当前线程的CPU时间加一
+            if(g_task_running->tid != 0)
+                g_task_running->estcpu = fixedpt_add(g_task_running->estcpu, FIXEDPT_ONE);
+           
+            // sys_putchar(g_task_running->estcpu);
 
-            //如果当前线程用完了时间片，也要强制调度
+            //如果当前线程用完了时间片，也要强制调度1
             if(g_task_running->timeslice <= 0) {
                 g_resched = 1;
                 g_task_running->timeslice = TASK_TIMESLICE_DEFAULT;

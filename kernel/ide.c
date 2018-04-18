@@ -155,7 +155,7 @@ static void ata_select(uint16_t bus)
 void ide_init(uint16_t bus)
 {
 	int i;
-  uint16_t *buf;
+	uint16_t *buf;
 	uint8_t *ptr;
 
 	outportb(bus + 1, 1);

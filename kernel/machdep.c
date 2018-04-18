@@ -39,29 +39,16 @@
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 time_t g_startup_time;
 
-/**
- * 初始化i8253定时器
- */
-static void init_pit(uint32_t freq)
-{
-    uint16_t latch = 1193182/freq;
-    outportb(0x43, 0x36);
-    outportb(0x40, latch&0xff);
-    outportb(0x40, (latch&0xff00)>>8);
-}
-
 #define IO_ICU1  0x20  /* 8259A Interrupt Controller #1 */
 #define IO_ICU2  0xA0  /* 8259A Interrupt Controller #2 */
 #define IRQ_SLAVE 0x04
 #define ICU_SLAVEID 2
 #define ICU_IMR_OFFSET  1 /* IO_ICU{1,2} + 1 */
-#define ICU_IDT_OFFSET 32 /* 外部中断在IDT的起始号码 */
 /**
  * 初始化i8259中断控制器
  */
-static void init_pic()
+static void init_i8259(uint8_t idt_offset)
 {
-    uint8_t idt_offset = ICU_IDT_OFFSET;
     outportb(IO_ICU1, 0x11);//ICW1
     outportb(IO_ICU1+ICU_IMR_OFFSET, idt_offset); //ICW2
     outportb(IO_ICU1+ICU_IMR_OFFSET, IRQ_SLAVE); //ICW3
@@ -79,6 +66,17 @@ static void init_pic()
     //打开ICU2中断
     outportb(IO_ICU1+ICU_IMR_OFFSET,
              inportb(IO_ICU1+ICU_IMR_OFFSET) & (~(1<<2)));
+}
+
+/**
+ * 初始化i8253定时器
+ */
+static void init_i8253(uint32_t freq)
+{
+    uint16_t latch = 1193182/freq;
+    outportb(0x43, 0x36);
+    outportb(0x40, latch&0xff);
+    outportb(0x40, (latch&0xff00)>>8);
 }
 
 /**
@@ -314,6 +312,7 @@ extern idt_handler_t
 /**
  * `struct gate_descriptor' comes from FreeBSD
  */
+#define ICU_IDT_OFFSET 32
 #define NR_IDT 131
 static
 struct gate_descriptor {
@@ -591,7 +590,7 @@ void syscall(struct context *ctx)
         sys_task_exit(*((int *)(ctx->esp+4)));
         break;
     case SYSCALL_task_create:
-        {
+        {   // 应注意到这里的花括号是为了能在这个作用域中声明变量
             uint32_t user_stack = *((uint32_t *)(ctx->esp+4));
             uint32_t user_entry = *((uint32_t *)(ctx->esp+8));
             uint32_t user_pvoid = *((uint32_t *)(ctx->esp+12));
@@ -599,6 +598,8 @@ void syscall(struct context *ctx)
 
             //printk("stack: 0x%08x, entry: 0x%08x, pvoid: 0x%08x\r\n",
             //       user_stack, user_entry, user_pvoid);
+
+            // 地址检验
             if(!IN_USER_VM(user_stack, 0) ||
                !IN_USER_VM(user_entry, 0)) {
                 ctx->eax = -ctx->eax;
@@ -677,7 +678,7 @@ void syscall(struct context *ctx)
 
             if(ctx->eax != -1 && fd == 0x8000) {
                 page_map(ctx->eax, offset,
-                         npages, L2E_U|((prot&PROT_WRITE)?L2E_W:0)|L2E_V);
+                         npages, PTE_U|((prot&PROT_WRITE)?PTE_W:0)|PTE_V);
             }
         }
         break;
@@ -702,7 +703,7 @@ void syscall(struct context *ctx)
                 uint32_t i, x;
                 for(i = 0; i < npages; i++) {
                     x = *vtopte(va);
-                    if(x & L2E_V) {
+                    if(x & PTE_V) {
                         *vtopte(va) = 0;
                         invlpg(va);
 
@@ -744,109 +745,42 @@ void syscall(struct context *ctx)
     case SYSCALL_getchar:
         ctx->eax = sys_getchar();
         break;
+    // 实验一 获得时间
+    case SYSCALL_time:
+        {
+            // 取出已入栈的函数参数
+            time_t *loc = *(time_t **)(ctx->esp + 4);
+            // 调用系统函数
+            ctx->eax = sys_time();
+            // 判断是否为空，不为空则写入数据
+            if(loc != NULL)
+                *loc = ctx->eax;
+        }
+        break;
+    // 实验三 获得线程的静态优先级
+    case SYSCALL_get_priority:
+        {
+            int tid = *(int *)(ctx->esp + 4);
+            ctx->eax = sys_get_priority(tid);
+        }
+        break;
+    // 实验三 设置线程的静态优先级
+    case SYSCALL_set_priority:
+        {
+            int tid = *(int *)(ctx->esp + 4);
+            int prio = *(int *)(ctx->esp + 8);
+
+            ctx->eax = sys_set_priority(tid, prio);
+        }
+        break;
     case SYSCALL_recv:
-        {
-            int sockfd = *( int *)(ctx->esp+4);
-            void *buf = *( uint8_t **)(ctx->esp+8);
-            size_t len = *( size_t *)(ctx->esp+12);
-            int flags = *( int *)(ctx->esp+16);
-            ctx->eax = sys_recv(sockfd, buf, len, flags);
-        }
-        break;
     case SYSCALL_send:
-        {
-            /*int sockfd = *( int *)(ctx->esp+4);*/
-            void *buf = *( uint8_t **)(ctx->esp+8);
-            size_t len = *( size_t *)(ctx->esp+12);
-            /*int flags = *( int *)(ctx->esp+16);*/
-            e1000_send(buf, len);
-            ctx->eax = len;
-        }
-        break;
     case SYSCALL_ioctl:
-        {
-            ctx->eax = -1;
-            /*int fd = *( int *)(ctx->esp+4);*/
-            uint32_t req = *( uint32_t *)(ctx->esp+8);
-            uint8_t *pv = *( uint8_t **)(ctx->esp+12);
-            if(req == SIOCGIFHWADDR) {
-                e1000_getmac(pv);
-                ctx->eax = 6;
-            }
-        }
-        break;
     default:
         printk("syscall #%d not implemented.\r\n", ctx->eax);
         ctx->eax = -ctx->eax;
         break;
     }
-}
-
-/**
- * page fault处理函数。
- * 特别注意：此时系统的中断处于打开状态
- */
-int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
-{
-    uint32_t prot;
-
-#if VERBOSE
-    printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-
-    /*检查地址是否合法*/
-    prot = page_prot(vaddr);
-    if(prot == -1 || prot == VM_PROT_NONE) {
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->ILLEGAL MEMORY ACCESS\r\n");
-        return -1;
-    }
-
-    if(code & L2E_V) {
-        /*页面保护引起PF*/
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->PROTECTION VIOLATION\r\n");
-		return -1;
-    }
-
-    {
-        uint32_t paddr;
-        uint32_t flags = L2E_V|L2E_C;
-
-        if(prot & VM_PROT_WRITE)
-            flags |= L2E_W;
-
-        /*只要访问用户的地址空间，都代表用户模式访问*/
-        if (vaddr < KERN_MIN_ADDR)
-            flags |= L2E_U;
-
-        /*搜索空闲帧*/
-        paddr = frame_alloc(1);
-        if(paddr != SIZE_MAX) {
-            /*找到空闲帧*/
-            *vtopte(vaddr) = paddr|flags;
-            memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
-            invlpg(vaddr);
-
-#if VERBOSE
-            printk("->0x%08x\r\n", *vtopte(vaddr));
-#endif
-
-            return 0;
-        } else {
-            /*物理内存已耗尽*/
-#if !VERBOSE
-            printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-            printk("->OUT OF RAM\r\n");
-        }
-    }
-
-    return -1;
 }
 
 /**
@@ -861,17 +795,17 @@ static uint32_t init_paging(uint32_t physfree)
      * 分配页目录
      */
     pgdir=(uint32_t *)physfree;
-    physfree += L1_TABLE_SIZE;
-    memset(pgdir, 0, L1_TABLE_SIZE);
+    physfree += PAGE_SIZE;
+    memset(pgdir, 0, PAGE_SIZE);
 
     /*
-     * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录
+     * 分配小页表，并填充页目录
      */
     for(i = 0; i < NR_KERN_PAGETABLE; i++) {
         pgdir[i                       ]=
-        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|L2E_V|L2E_W;
-        memset((void *)physfree, 0, L2_TABLE_SIZE);
-        physfree+=L2_TABLE_SIZE;
+        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
+        memset((void *)physfree, 0, PAGE_SIZE);
+        physfree+=PAGE_SIZE;
     }
 
     /*
@@ -879,12 +813,12 @@ static uint32_t init_paging(uint32_t physfree)
      */
     pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
     for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
-        pte[i>>PAGE_SHIFT]=(i)|L2E_V|L2E_W;
+        pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W;
 
     /*
      * 映射页目录及页表
      */
-    pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|L2E_V|L2E_W;
+    pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_W;
 
     /*
      * 打开分页
@@ -957,8 +891,8 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
              ((multiboot_info_t *)mbi)->mmap_length,
              physfree);
 
-    init_pic();
-    init_pit(HZ);
+    init_i8259(ICU_IDT_OFFSET);
+    init_i8253(HZ);
 }
 
 /**
@@ -966,7 +900,7 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
  */
 void cstart(uint32_t magic, uint32_t mbi)
 {
-    uint32_t i, _end = ROUNDUP(R((uint32_t)(&end)), L1_TABLE_SIZE);
+    uint32_t i, _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
 
     /*
      * 机器相关（Machine Dependent）的初始化
@@ -1044,4 +978,49 @@ void cstart(uint32_t magic, uint32_t mbi)
      * 机器无关（Machine Independent）的初始化
      */
     mi_startup();
+}
+
+// 实验一 添加时间调用函数
+time_t sys_time()
+{
+    return ((long)(g_timer_ticks) & 0xffff) / HZ + g_startup_time;
+}
+
+// 实验三 获取线程静态优先级
+int sys_get_priority(int tid)
+{
+    uint32_t flags;
+    struct tcb * tsk;
+
+    if(tid == 0)    // tid为0，获取当前线程的nice值
+        tid = g_task_running->tid;
+    
+    save_flags_cli(flags);      // 关中断
+    tsk = get_task(tid);        // 取tid
+    restore_flags(flags);       // 开中断
+
+    return tsk->nice + NZERO;
+}
+
+// 实验三 设置线程静态优先级
+int sys_set_priority(int tid, int prio)
+{
+    int ret = -1;
+    uint32_t flags;
+    struct tcb * tsk;
+    
+    if(tid == 0)    // tid为0，设置当前线程的nice值
+        tid = g_task_running->tid;
+
+    if(prio >= 0 && prio < 2 * NZERO - 1)
+    {
+        save_flags_cli(flags);       // 关中断
+        tsk = get_task(tid);    // 取tid
+        restore_flags(flags);        // 开中断
+
+        tsk->nice = prio - NZERO; // 修改优先级
+        ret = 0;
+    }
+
+    return ret;
 }
