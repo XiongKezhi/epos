@@ -43,7 +43,7 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
-    Lab3_Go();
+    Lab2_Go();
 
     while (1)
         ;
