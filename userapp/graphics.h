@@ -108,7 +108,8 @@ rgb_struct Hue2rgb(int hue);
 float maxRGB(float r, float g, float b);
 float minRGB(float r, float g, float b);
 
-// 画出一个数组中指定数量的线
+// 用指定颜色的线画出当前数组
+void drawLines(int ar[], int size, int X_Location, int Y_Location, int colorSort);
 void drawLinesFromBottom(int ar[], int size, int X_Location, int Y_Location);
 
 #endif /*_GRAPHICS_H*/

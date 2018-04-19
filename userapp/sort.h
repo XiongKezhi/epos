@@ -71,7 +71,4 @@ void mergeSort(int ar[], int size, int colorSort, int X_Location, int Y_Location
 // 堆排
 void heapSort(int ar[], int size, int colorSort, int X_Location, int Y_Location);
 
-// 用指定颜色的线画出当前数组
-void drawLines(int ar[], int size, int X_Location, int Y_Location, int colorSort);
-
 #endif // defined _SORT_H_
