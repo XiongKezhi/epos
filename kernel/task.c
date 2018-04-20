@@ -36,80 +36,80 @@ struct tcb *g_task_own_fpu;
  * 注意：该函数的执行不能被中断
  */
 // 轮转调度算法版
-void schedule()
-{
-    struct tcb *select = g_task_running;
-    do {
-        select = select->next;
-        if(select == NULL)
-            select = g_task_head;
-        if(select == g_task_running)
-            break;
-        if((select->tid != 0) &&
-           (select->state == TASK_STATE_READY))
-            break;
-    } while(1);
-
-    if(select == g_task_running) {
-        if(select->state == TASK_STATE_READY)
-            return;
-        select = task0;
-    }
-
-    // printk("0x%d -> 0x%d\r\n", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
-
-    if(select->signature != TASK_SIGNATURE)
-        printk("warning: kernel stack of task #%d overflow!!!", select->tid);
-
-    g_resched = 0;
-    switch_to(select);
-}
-// ---------------------------------------------------------------------------------------------------------------
-// 优先调度算法版
 // void schedule()
 // {
-//     struct tcb *select = NULL;
-//     int maxPriority = -1;
+//     struct tcb *select = g_task_running;
+//     do {
+//         select = select->next;
+//         if(select == NULL)
+//             select = g_task_head;
+//         if(select == g_task_running)
+//             break;
+//         if((select->tid != 0) &&
+//            (select->state == TASK_STATE_READY))
+//             break;
+//     } while(1);
 
-//     for(struct tcb *tsk = g_task_head; tsk != NULL; tsk = tsk->next)
-//     {
-//         tsk->priority = PRI_USER_MAX - fixedpt_toint(fixedpt_div(tsk->estcpu,fixedpt_fromint(4))) - tsk->nice * 2;
-
-//         // printk("task #%d ", tsk->tid);
-//         // printk("priority: %d\n", tsk->priority);
-
-//         // 避免运行task0
-//         if(tsk->tid == 0)
-//             tsk->priority = -1;
-
-//         // 及时响应主线程
-//         if(tsk->tid == 1 && tsk->state == TASK_STATE_READY)
-//             switch_to(tsk);
-
-//         if(tsk->priority > maxPriority && tsk->state == TASK_STATE_READY)
-//         {
-//             select = tsk;
-//             maxPriority = tsk->priority;
-//         }
+//     if(select == g_task_running) {
+//         if(select->state == TASK_STATE_READY)
+//             return;
+//         select = task0;
 //     }
 
-//     // 选择为空 无其他线程可运行
-//     if(select == NULL)
-//         select = task0;
-
-//     // 输出信息
-//     // if(select->tid != 0)
-//     // {
-//     //     printk("\nselect task #%d ", select->tid);
-//     //     printk("priority: %d ", select->priority);
-//     //     printk("nice: %d\n\n", select->nice + 20);
-//     // }
+//     // printk("0x%d -> 0x%d\r\n", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
 
 //     if(select->signature != TASK_SIGNATURE)
 //         printk("warning: kernel stack of task #%d overflow!!!", select->tid);
 
+//     g_resched = 0;
 //     switch_to(select);
 // }
+// ---------------------------------------------------------------------------------------------------------------
+// 优先调度算法版
+void schedule()
+{
+    struct tcb *select = NULL;
+    int maxPriority = -1;
+
+    for(struct tcb *tsk = g_task_head; tsk != NULL; tsk = tsk->next)
+    {
+        tsk->priority = PRI_USER_MAX - fixedpt_toint(fixedpt_div(tsk->estcpu,fixedpt_fromint(4))) - tsk->nice * 2;
+
+        // printk("task #%d ", tsk->tid);
+        // printk("priority: %d\n", tsk->priority);
+
+        // 避免运行task0
+        if(tsk->tid == 0)
+            tsk->priority = -1;
+
+        // 及时响应主线程
+        if(tsk->tid == 1 && tsk->state == TASK_STATE_READY)
+            switch_to(tsk);
+
+        if(tsk->priority > maxPriority && tsk->state == TASK_STATE_READY)
+        {
+            select = tsk;
+            maxPriority = tsk->priority;
+        }
+    }
+
+    // 选择为空 无其他线程可运行
+    if(select == NULL)
+        select = task0;
+
+    // 输出信息
+    // if(select->tid != 0)
+    // {
+    //     printk("\nselect task #%d ", select->tid);
+    //     printk("priority: %d ", select->priority);
+    //     printk("nice: %d\n\n", select->nice + 20);
+    // }
+
+    if(select->signature != TASK_SIGNATURE)
+        printk("warning: kernel stack of task #%d overflow!!!", select->tid);
+
+    switch_to(select);
+}
 
 /**
  * 把当前线程切换为等待状态，等待在*head队列中

@@ -43,7 +43,7 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
-    Lab2_Go();
+    Lab3_Go();
 
     while (1)
         ;
@@ -135,7 +135,7 @@ void Lab3_Go()
     init_graphic(0x0180);
 
     sortAttributes *bubbleAttr_left = attrGenerator(&bubbleSort, 0, 0, 0);
-    sortAttributes *bubbleAttr_right = attrGenerator(&bubbleSort, 0, 2, 0);
+    sortAttributes *bubbleAttr_right = attrGenerator(&bubbleSort, 1, 2, 0);
 
     int tid_bubble_left  = sortThreadRun(bubbleAttr_left);
     int tid_bubble_right = sortThreadRun(bubbleAttr_right);
