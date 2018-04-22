@@ -140,8 +140,8 @@ void Lab3_Go()
     int tid_bubble_left  = sortThreadRun(bubbleAttr_left);
     int tid_bubble_right = sortThreadRun(bubbleAttr_right);
 
-    printf("left  %d\n", get_priority(tid_bubble_left));
-    printf("right %d\n", get_priority(tid_bubble_right));
+    // printf("left  %d\n", get_priority(tid_bubble_left));
+    // printf("right %d\n", get_priority(tid_bubble_right));
 
     int key = 0;
     int curr_left_nice  = -10;

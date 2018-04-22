@@ -21,8 +21,8 @@
 #include <string.h>
 #include "kernel.h"
 
-#define PRI_USER_MAX 0
-#define PRI_USER_MIN 127
+#define PRI_USER_MAX 127
+#define PRI_USER_MIN 0
 
 int g_resched;
 struct tcb *g_task_head;
@@ -74,6 +74,12 @@ void schedule()
     for(struct tcb *tsk = g_task_head; tsk != NULL; tsk = tsk->next)
     {
         tsk->priority = PRI_USER_MAX - fixedpt_toint(fixedpt_div(tsk->estcpu,fixedpt_fromint(4))) - tsk->nice * 2;
+
+        // 截断
+        // if(tsk->priority > PRI_USER_MAX)
+        //     tsk->priority = PRI_USER_MAX;
+        // if(tsk->priority < PRI_USER_MIN)
+        //     tsk->priority = PRI_USER_MIN;
 
         // printk("task #%d ", tsk->tid);
         // printk("priority: %d\n", tsk->priority);
