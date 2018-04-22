@@ -668,7 +668,7 @@ OUTPUT(eposkrnl.out elf32-i386)
  .debug_ranges  0x0000000000001248       0xa0 ../lib/snprintf.o
  .debug_ranges  0x00000000000012e8      0x490 ../lib/tlsf/tlsf.o
 
-.debug_line     0x0000000000000000     0x2d40
+.debug_line     0x0000000000000000     0x2d3e
  .debug_line    0x0000000000000000      0x167 ide.o
  .debug_line    0x0000000000000167        0x0 floppy.o
  .debug_line    0x0000000000000167      0x149 pci.o
@@ -676,24 +676,24 @@ OUTPUT(eposkrnl.out elf32-i386)
  .debug_line    0x000000000000067b      0x108 kbd.o
  .debug_line    0x0000000000000783      0x15f timer.o
  .debug_line    0x00000000000008e2      0x7a5 machdep.o
- .debug_line    0x0000000000001087      0x201 task.o
- .debug_line    0x0000000000001288       0x79 mktime.o
- .debug_line    0x0000000000001301       0x36 sem.o
- .debug_line    0x0000000000001337      0x1df page.o
- .debug_line    0x0000000000001516      0x133 startup.o
- .debug_line    0x0000000000001649       0xe8 frame.o
- .debug_line    0x0000000000001731       0x9b kmalloc.o
- .debug_line    0x00000000000017cc      0x69a dosfs.o
- .debug_line    0x0000000000001e66        0x0 pe.o
- .debug_line    0x0000000000001e66       0xce elf.o
- .debug_line    0x0000000000001f34       0x6a printk.o
- .debug_line    0x0000000000001f9e      0x1d6 bitmap.o
- .debug_line    0x0000000000002174       0xe0 ../lib/softfloat.o
- .debug_line    0x0000000000002254      0x120 ../lib/string.o
- .debug_line    0x0000000000002374      0x16a ../lib/memcpy.o
- .debug_line    0x00000000000024de       0xb4 ../lib/memset.o
- .debug_line    0x0000000000002592      0x2d2 ../lib/snprintf.o
- .debug_line    0x0000000000002864      0x4dc ../lib/tlsf/tlsf.o
+ .debug_line    0x0000000000001087      0x1ff task.o
+ .debug_line    0x0000000000001286       0x79 mktime.o
+ .debug_line    0x00000000000012ff       0x36 sem.o
+ .debug_line    0x0000000000001335      0x1df page.o
+ .debug_line    0x0000000000001514      0x133 startup.o
+ .debug_line    0x0000000000001647       0xe8 frame.o
+ .debug_line    0x000000000000172f       0x9b kmalloc.o
+ .debug_line    0x00000000000017ca      0x69a dosfs.o
+ .debug_line    0x0000000000001e64        0x0 pe.o
+ .debug_line    0x0000000000001e64       0xce elf.o
+ .debug_line    0x0000000000001f32       0x6a printk.o
+ .debug_line    0x0000000000001f9c      0x1d6 bitmap.o
+ .debug_line    0x0000000000002172       0xe0 ../lib/softfloat.o
+ .debug_line    0x0000000000002252      0x120 ../lib/string.o
+ .debug_line    0x0000000000002372      0x16a ../lib/memcpy.o
+ .debug_line    0x00000000000024dc       0xb4 ../lib/memset.o
+ .debug_line    0x0000000000002590      0x2d2 ../lib/snprintf.o
+ .debug_line    0x0000000000002862      0x4dc ../lib/tlsf/tlsf.o
 
 .debug_str      0x0000000000000000     0x214a
  .debug_str     0x0000000000000000      0x27e ide.o

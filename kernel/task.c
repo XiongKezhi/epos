@@ -88,10 +88,11 @@ void schedule()
         if(tsk->tid == 0)
             tsk->priority = -1;
 
-        // 及时响应主线程
+        // 及时响应系统主线程
         if(tsk->tid == 1 && tsk->state == TASK_STATE_READY)
             switch_to(tsk);
 
+        // 判断优先级
         if(tsk->priority > maxPriority && tsk->state == TASK_STATE_READY)
         {
             select = tsk;
@@ -104,12 +105,9 @@ void schedule()
         select = task0;
 
     // 输出信息
-    // if(select->tid != 0)
-    // {
-    //     printk("\nselect task #%d ", select->tid);
-    //     printk("priority: %d ", select->priority);
-    //     printk("nice: %d\n\n", select->nice + 20);
-    // }
+    // printk("\nselect task #%d ", select->tid);
+    // printk("priority: %d ", select->priority);
+    // printk("nice: %d\n\n", select->nice + 20);
 
     if(select->signature != TASK_SIGNATURE)
         printk("warning: kernel stack of task #%d overflow!!!", select->tid);
