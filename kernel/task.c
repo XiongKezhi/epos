@@ -112,6 +112,7 @@ void schedule()
     if(select->signature != TASK_SIGNATURE)
         printk("warning: kernel stack of task #%d overflow!!!", select->tid);
 
+    g_resched = 0;
     switch_to(select);
 }
 
