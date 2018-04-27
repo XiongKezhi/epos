@@ -21,9 +21,6 @@
 #include <string.h>
 #include "kernel.h"
 
-#define PRI_USER_MAX 127
-#define PRI_USER_MIN 0
-
 int g_resched;
 struct tcb *g_task_head;
 struct tcb *g_task_running;
@@ -31,85 +28,31 @@ struct tcb *task0;
 struct tcb *g_task_own_fpu;
 
 /**
- * CPU调度器函数
+ * CPU调度器函数，这里只实现了轮转调度算法
  *
  * 注意：该函数的执行不能被中断
  */
-// 轮转调度算法版
-// void schedule()
-// {
-//     struct tcb *select = g_task_running;
-//     do {
-//         select = select->next;
-//         if(select == NULL)
-//             select = g_task_head;
-//         if(select == g_task_running)
-//             break;
-//         if((select->tid != 0) &&
-//            (select->state == TASK_STATE_READY))
-//             break;
-//     } while(1);
-
-//     if(select == g_task_running) {
-//         if(select->state == TASK_STATE_READY)
-//             return;
-//         select = task0;
-//     }
-
-//     // printk("0x%d -> 0x%d\r\n", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
-
-//     if(select->signature != TASK_SIGNATURE)
-//         printk("warning: kernel stack of task #%d overflow!!!", select->tid);
-
-//     g_resched = 0;
-//     switch_to(select);
-// }
-// ---------------------------------------------------------------------------------------------------------------
-// 优先调度算法版
 void schedule()
 {
-    struct tcb *select = NULL;
-    int maxPriority = -1;
+    struct tcb *select = g_task_running;
+    do {
+        select = select->next;
+        if(select == NULL)
+            select = g_task_head;
+        if(select == g_task_running)
+            break;
+        if((select->tid != 0) &&
+           (select->state == TASK_STATE_READY))
+            break;
+    } while(1);
 
-    for(struct tcb *tsk = g_task_head; tsk != NULL; tsk = tsk->next)
-    {
-        tsk->priority = PRI_USER_MAX - fixedpt_toint(fixedpt_div(tsk->estcpu,fixedpt_fromint(4))) - tsk->nice * 2;
-
-        // 截断
-        // if(tsk->priority > PRI_USER_MAX)
-        //     tsk->priority = PRI_USER_MAX;
-        // if(tsk->priority < PRI_USER_MIN)
-        //     tsk->priority = PRI_USER_MIN;
-
-        // printk("task #%d ", tsk->tid);
-        // printk("priority: %d\n", tsk->priority);
-
-        // 避免运行task0
-        if(tsk->tid == 0)
-            tsk->priority = -1;
-
-        // 及时响应系统主线程
-        if(tsk->tid == 1 && tsk->state == TASK_STATE_READY)
-        { 
-            switch_to(tsk);
+    if(select == g_task_running) {
+        if(select->state == TASK_STATE_READY)
             return;
-        }
-        // 判断优先级
-        if(tsk->priority > maxPriority && tsk->state == TASK_STATE_READY)
-        {
-            select = tsk;
-            maxPriority = tsk->priority;
-        }
+        select = task0;
     }
 
-    // 选择为空 无其他线程可运行
-    if(select == NULL)
-        select = task0;
-
-    // 输出信息
-    // printk("\nselect task #%d ", select->tid);
-    // printk("priority: %d ", select->priority);
-    // printk("nice: %d\n\n", select->nice + 20);
+    //printk("0x%d -> 0x%d\r\n", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
 
     if(select->signature != TASK_SIGNATURE)
         printk("warning: kernel stack of task #%d overflow!!!", select->tid);
@@ -202,6 +145,7 @@ void remove_task(struct tcb *tsk)
     }
 }
 
+static
 struct tcb* get_task(int tid)
 {
     struct tcb *tsk;
@@ -258,11 +202,6 @@ struct tcb *sys_task_create(void *tos,
     save_flags_cli(flags);
     add_task(new);
     restore_flags(flags);
-
-    // 初始化静态变量nice
-    new->nice = 0;
-    // CPU时间
-    new->estcpu = 0;
 
     return new;
 }
