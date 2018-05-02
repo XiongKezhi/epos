@@ -358,5 +358,155 @@ int rgb2Hue(rgb_struct rgb)
 ```
 最后贴一张排序结果的图吧
 ![排序结果](https://img-blog.csdn.net/20180419114658328?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0F1Z3VzdF8xOTk3/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
-以上就是 epos系统的线程的创建部分实验
+
 </br>
+
+# 实验三 线程的调度
+在这个实验中，我们需要先将系统原有的轮转调度算法改为优先调度算法，然后创建两个能用键盘控制优先级调度的排序线程。</br>
+
+## 1. 优先级调度器：
+&emsp; 首先给出优先级调度器的具体实现。在这个调度器中，我们将完成选出当前优先级最高的就绪线程并调度运行的工作。需要注意的是，task0只能在系统没有其他任何可调度线程的时候进行调度。</br>
+```
+// 优先调度算法版
+void schedule()
+{
+    struct tcb *select = NULL;
+    int maxPriority = -1;
+
+    // 遍历整个线程队列
+    for(struct tcb *tsk = g_task_head; tsk != NULL; tsk = tsk->next)
+    {
+        // 计算每个线程的动态优先级
+        tsk->priority = PRI_USER_MAX - fixedpt_toint(fixedpt_div(tsk->estcpu,fixedpt_fromint(4))) - tsk->nice * 2;
+
+        // 截断
+        // if(tsk->priority > PRI_USER_MAX)
+        //     tsk->priority = PRI_USER_MAX;
+        // if(tsk->priority < PRI_USER_MIN)
+        //     tsk->priority = PRI_USER_MIN;
+
+        // 避免运行task0
+        if(tsk->tid == 0)
+            tsk->priority = -1;
+
+        // 及时响应系统主线程
+        if(tsk->tid == 1 && tsk->state == TASK_STATE_READY)
+        { 
+            switch_to(tsk);
+            return;
+        }
+
+        // 判断优先级
+        if(tsk->priority > maxPriority && tsk->state == TASK_STATE_READY)
+        {
+            select = tsk;
+            maxPriority = tsk->priority;
+        }
+    }
+
+    // 选择为空 无其他线程可运行
+    if(select == NULL)
+        select = task0;
+
+    if(select->signature != TASK_SIGNATURE)
+        printk("warning: kernel stack of task #%d overflow!!!", select->tid);
+
+    g_resched = 0;
+    switch_to(select);
+}
+```
+
+## 2. 优先级相关的系统调用
+&emsp; 要完成在用户态下对线程优先级的修改，需要添加两个系统调用，这两个调度将用来获取和修改指定线程的静态优先级(即nice值)。用户态中系统调用函数的声明如下：
+```
+int get_priority(int tid);
+int set_priority(int tid, int prio);
+```
+&emsp; 函数的实现在kernel/machdep.c，需要注意静态优先级(nice值)取值范围为-20~19并且是值越小优先级越高, 而动态优先级(priority值)取值范围是0~39并且是值越大优先级越高。而且get_priority应该的返回的是动态优先级值，传递给set_priority的值也应该是动态优先级值。
+```
+// #define NZERO 20
+// 获取线程静态优先级
+int sys_get_priority(int tid)
+{
+    uint32_t flags;
+    struct tcb * tsk;
+
+    if(tid == 0)    // tid为0，获取当前线程的nice值
+        tid = g_task_running->tid;
+    
+    save_flags_cli(flags);      // 关中断
+    tsk = get_task(tid);        // 取tid
+    restore_flags(flags);       // 开中断
+
+    return tsk->nice + NZERO;
+}
+
+// 设置线程静态优先级
+// 成功返回0，失败返回-1
+int sys_set_priority(int tid, int prio)
+{
+    int ret = -1;
+    uint32_t flags;
+    struct tcb * tsk;
+    
+    if(tid == 0)    // tid为0，设置当前线程的nice值
+        tid = g_task_running->tid;
+
+    if(prio >= 0 && prio < 2 * NZERO - 1)
+    {
+        save_flags_cli(flags);       // 关中断
+        tsk = get_task(tid);         // 取tid
+        restore_flags(flags);        // 开中断
+
+        tsk->nice = prio - NZERO; // 修改优先级
+        ret = 0;
+    }
+
+    return ret;
+}
+```
+
+# 3. 排序线程的调度
+&emsp; 先给出调度排序线程的效果图吧
+![排序示意图](https://img-blog.csdn.net/20180502224200343?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0F1Z3VzdF8xOTk3/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
+&emsp; 图中间的两个柱子用来表示两边排序线程的优先级高低，使用方向键进行调整。
+
+&emsp; 两边排序线程的创建步骤同实验二一样，具体如下：
+```
+// 两个线程都是用冒泡排序 右边按色彩排序
+sortAttributes *bubbleAttr_left = attrGenerator(bubbleSort, 0, 0, 0);
+sortAttributes *bubbleAttr_right = attrGenerator(bubbleSort, 1, 2, 0);
+// 获取线程id号
+int tid_bubble_left  = sortThreadRun(bubbleAttr_left);
+int tid_bubble_right = sortThreadRun(bubbleAttr_right);
+```
+
+&emsp; 接下来对左右两个线程以及中间两个进度条进行初始化
+```
+    // 初始化优先级
+    int key = 0;
+    int curr_left_nice  = -10;
+    int curr_right_nice = -10;
+
+    set_priority(tid_bubble_left, curr_left_nice + NZERO);
+    set_priority(tid_bubble_right, curr_right_nice + NZERO);
+
+    // 将屏幕竖直划分为40块，代表40级静态优先级
+    double levelHight = SCREEN_HIGHT / (2 * NZERO);
+
+    // 左边进度条X轴开始位置 和 右边进度条X轴结束位置
+    int left_start = SCREEN_WIDTH / 2 - BLOCK_WIDTH / 2;
+    int right_end  = SCREEN_WIDTH / 2 + BLOCK_WIDTH / 2;
+
+    uint32_t left_color = 0xffff6f;
+    uint32_t right_color = 0x2cff68;
+
+    // 画出进度条
+    refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
+                    SCREEN_WIDTH / 2, BLOCK_HIGHT, left_color);
+    refreshArea(SCREEN_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
+                    right_end, BLOCK_HIGHT, right_color);
+```
+
+
+

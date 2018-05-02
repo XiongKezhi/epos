@@ -24,7 +24,7 @@ int getchar();
 // 实验一 时间调用函数的C语言声明
 time_t time(time_t *loc);
 
-// 实验二 优先级的获取与设置
+// 实验三 优先级的获取与设置
 int get_priority(int tid);
 int set_priority(int tid, int prio);
 
