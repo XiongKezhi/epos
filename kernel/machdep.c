@@ -787,6 +787,20 @@ void syscall(struct context *ctx)
             ctx->eax = sys_sem_destroy(semid);
         }
         break;
+    // 实验四 p操作
+    case SYSCALL_sem_wait:
+        {
+            int semid = *(int *)(ctx->esp + 4);
+            ctx->eax = sys_sem_wait(semid);
+        }
+        break;
+    // 实验四 v操作
+    case SYSCALL_sem_signal:
+        {
+            int semid = *(int *)(ctx->esp + 4);
+            ctx->eax = sys_sem_signal(semid);
+        }
+        break;
     case SYSCALL_recv:
     case SYSCALL_send:
     case SYSCALL_ioctl:

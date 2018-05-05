@@ -33,6 +33,20 @@ void __main()
 	g_heap = tlsf_create_with_pool(heap_base, heap_size);
 }
 
+void task_sem_singal(void *arg)
+{
+    printf("task singal...\n");
+    sem_signal(1);
+    task_exit(0);
+};
+
+void task_sem_wait(void *arg)
+{
+    printf("task wait...\n");
+    sem_wait(1);
+    task_exit(0);
+};
+
 /**
  * 第一个运行在用户模式的线程所执行的函数
  */
@@ -46,11 +60,27 @@ void main(void *pv)
     for (int i = 0; i < 10; ++i)
         sem_create(i);
 
-    printf("create done...\n\n");
-    printf("destroy 2: %d\n\n", sem_destroy(2));
-    printf("destroy 2: %d\n\n", sem_destroy(8));
-    printf("destroy 9: %d\n\n", sem_destroy(10));
-    
+    unsigned char *stack_signal, *stack_signal_again,*stack_wait, *stack_wait_again;
+    unsigned int stack_size = 1024 * 1024;
+    stack_signal = (unsigned char *)malloc(stack_size);
+    stack_signal_again = (unsigned char *)malloc(stack_size);
+    stack_wait = (unsigned char *)malloc(stack_size);
+    stack_wait_again = (unsigned char *)malloc(stack_size);
+
+    printf("task run...\n");
+
+    int tid_wait = task_create(stack_wait + stack_size, &task_sem_wait, (void *)0);
+    int tid_wait_again = task_create(stack_wait_again + stack_size, &task_sem_wait, (void *)0);
+    int tid_signal = task_create(stack_signal + stack_size, &task_sem_singal, (void *)0);
+    int tid_signal_again = task_create(stack_signal_again + stack_size, &task_sem_singal, (void *)0);
+
+    task_wait(tid_signal, NULL);
+    task_wait(tid_signal_again, NULL);
+    task_wait(tid_wait, NULL);
+    task_wait(tid_wait_again, NULL);
+
+    printf("done...\n");
+
     while (1)
         ;
     task_exit(0);
