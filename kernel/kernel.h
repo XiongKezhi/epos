@@ -201,11 +201,17 @@ int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 
 void     mi_startup();
 
-// 实验一 时钟
+// 实验二 时钟
 time_t sys_time();
 
-// 实验二 线程调度
+// 实验三 线程调度
 int sys_get_priority(int tid);
 int sys_set_priority(int tid, int prio);
+
+// 实验四 线程同步
+int sys_sem_create(int value);
+int sys_sem_destroy(int semid);
+int sys_sem_wait(int semid);
+int sys_sem_signal(int semid);
 
 #endif /*_KERNEL_H*/

@@ -28,6 +28,12 @@ time_t time(time_t *loc);
 int get_priority(int tid);
 int set_priority(int tid, int prio);
 
+// 实验四 线程同步
+int sem_create(int value);
+int sem_destroy(int semid);
+int sem_wait(int semid);
+int sem_signal(int semid);
+
 struct vm86_context {
   uint32_t  : 32;/*0*/
   uint32_t  : 32;/*4*/

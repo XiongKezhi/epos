@@ -43,8 +43,14 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
-    Lab3_Go();
+    for (int i = 0; i < 10; ++i)
+        sem_create(i);
 
+    printf("create done...\n\n");
+    printf("destroy 2: %d\n\n", sem_destroy(2));
+    printf("destroy 2: %d\n\n", sem_destroy(8));
+    printf("destroy 9: %d\n\n", sem_destroy(10));
+    
     while (1)
         ;
     task_exit(0);

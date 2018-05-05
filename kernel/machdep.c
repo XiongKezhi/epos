@@ -773,6 +773,20 @@ void syscall(struct context *ctx)
             ctx->eax = sys_set_priority(tid, prio);
         }
         break;
+    // 实验四 创建信号量
+    case SYSCALL_sem_create:
+        {
+            int value = *(int *)(ctx->esp + 4);
+            ctx->eax = sys_sem_create(value);
+        }
+        break;
+    // 实验四 删除信号量 
+    case SYSCALL_sem_destroy:
+        {
+            int semid = *(int *)(ctx->esp + 4);
+            ctx->eax = sys_sem_destroy(semid);
+        }
+        break;
     case SYSCALL_recv:
     case SYSCALL_send:
     case SYSCALL_ioctl:

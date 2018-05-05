@@ -40,11 +40,17 @@
 #define SYSCALL_putchar       1000
 #define SYSCALL_getchar       1001
 
-// 实验一 定义系统调用的号码
+// 实验二 定义系统调用的号码
 #define SYSCALL_time          2016
 
-// 实验二
+// 实验三 线程调度
 #define SYSCALL_get_priority  2017
 #define SYSCALL_set_priority  2018
+
+// 实验四 线程同步
+#define SYSCALL_sem_create    2019
+#define SYSCALL_sem_destroy   2020
+#define SYSCALL_sem_wait      2021
+#define SYSCALL_sem_signal    2022
 
 #endif /*_SYSCALLNR_H*/
