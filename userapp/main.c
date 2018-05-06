@@ -21,6 +21,7 @@ extern void *g_heap;
 void Lab1_Go();
 void Lab2_Go();
 void Lab3_Go();
+void Lab4_Go();
 
 /**
  * GCC insists on __main
@@ -57,29 +58,31 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
-    for (int i = 0; i < 10; ++i)
-        sem_create(i);
+    // for (int i = 0; i < 10; ++i)
+    //     sem_create(i);
 
-    unsigned char *stack_signal, *stack_signal_again,*stack_wait, *stack_wait_again;
-    unsigned int stack_size = 1024 * 1024;
-    stack_signal = (unsigned char *)malloc(stack_size);
-    stack_signal_again = (unsigned char *)malloc(stack_size);
-    stack_wait = (unsigned char *)malloc(stack_size);
-    stack_wait_again = (unsigned char *)malloc(stack_size);
+    // unsigned char *stack_signal, *stack_signal_again,*stack_wait, *stack_wait_again;
+    // unsigned int stack_size = 1024 * 1024;
+    // stack_signal = (unsigned char *)malloc(stack_size);
+    // stack_signal_again = (unsigned char *)malloc(stack_size);
+    // stack_wait = (unsigned char *)malloc(stack_size);
+    // stack_wait_again = (unsigned char *)malloc(stack_size);
 
-    printf("task run...\n");
+    // printf("task run...\n");
+    
+    // int tid_wait = task_create(stack_wait + stack_size, &task_sem_wait, (void *)0);
+    // int tid_wait_again = task_create(stack_wait_again + stack_size, &task_sem_wait, (void *)0);
+    // int tid_signal = task_create(stack_signal + stack_size, &task_sem_singal, (void *)0);
+    // int tid_signal_again = task_create(stack_signal_again + stack_size, &task_sem_singal, (void *)0);
 
-    int tid_wait = task_create(stack_wait + stack_size, &task_sem_wait, (void *)0);
-    int tid_wait_again = task_create(stack_wait_again + stack_size, &task_sem_wait, (void *)0);
-    int tid_signal = task_create(stack_signal + stack_size, &task_sem_singal, (void *)0);
-    int tid_signal_again = task_create(stack_signal_again + stack_size, &task_sem_singal, (void *)0);
+    // task_wait(tid_signal, NULL);
+    // task_wait(tid_signal_again, NULL);
+    // task_wait(tid_wait, NULL);
+    // task_wait(tid_wait_again, NULL);
 
-    task_wait(tid_signal, NULL);
-    task_wait(tid_signal_again, NULL);
-    task_wait(tid_wait, NULL);
-    task_wait(tid_wait_again, NULL);
+    // printf("done...\n");
 
-    printf("done...\n");
+    Lab4_Go();
 
     while (1)
         ;
@@ -256,4 +259,47 @@ void Lab3_Go()
 
     bubbleAttr_left = NULL;
     bubbleAttr_right = NULL;
+}
+
+// 实验四 线程同步
+#define MAX_TASK 6
+int tid[MAX_TASK];
+void Lab4_Go()
+{
+    init_graphic(0x0180);
+
+    sem_create(0);
+
+    extern void task_producer(void *arg);
+    extern void task_consumer(void *arg);
+
+    for (int i = 0; i < MAX_TASK;++i)
+        tid[i] = -1;
+
+    unsigned char *stack_producer, *stack_consumer;
+    unsigned int stack_size = 1024 * 1024;
+    stack_producer = (unsigned char *)malloc(stack_size);
+    stack_consumer = (unsigned char *)malloc(stack_size);
+
+    int tid_producer = task_create(stack_producer + stack_size, &task_producer, (void *)0);
+    int tid_consumer = task_create(stack_consumer + stack_size, &task_consumer, (void *)0);
+
+    task_wait(tid_producer, NULL);
+    task_wait(tid_consumer, NULL);
+}
+
+void task_producer(void *arg)
+{
+    sortAttributes *bubbleAttr = attrGenerator(bubbleSort, 1, 0, 0);
+
+    drawLines(bubbleAttr->randNumber, BLOCK_HIGHT, 0, 0, 1);
+    tid[0] = sortThreadRun(bubbleAttr);
+    task_wait(tid[0], NULL);
+    task_exit(0);
+}
+
+void task_consumer(void *arg)
+{
+    sem_signal(0);
+    task_exit(0);
 }

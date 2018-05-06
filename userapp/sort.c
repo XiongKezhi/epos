@@ -10,6 +10,7 @@ void sort_runner(void *pv)
 {
     // 取出需执行的函数及其参数
     sortAttributes *attr = (sortAttributes *)pv;
+    sem_wait(0);
     // 执行该函数
     attr->sortFun(attr->randNumber, attr->size, attr->colorSort, attr->X_Location, attr->Y_Location);
     // 线程退出

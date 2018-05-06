@@ -21,6 +21,17 @@ typedef struct sortFunctionAttributes
     int colorSort;         // 1：按颜色排序； 0：按长度排序
 } sortAttributes;
 
+typedef struct sortFunctionAttributes_with_semaphore
+{
+    sortFunction sortFun;   // 排序函数指针
+    int *randNumber;        // 数组指针
+    int size;               // 数组大小
+    int X_Location;         // 水平位置
+    int Y_Location;         // 垂直位置
+    unsigned char *stack_sort;  //线程栈
+    int colorSort;         // 1：按颜色排序； 0：按长度排序
+} sortAttributes_sem;
+
 // 线程睡眠
 int msleep(const uint32_t msec);
 
