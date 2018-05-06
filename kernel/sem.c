@@ -38,7 +38,7 @@ sem_t* find_sem_prev(int semid)
     // 遍历信号量链表
     while(sem_walker->next != NULL && sem_walker->next->sid != semid)
         sem_walker = sem_walker->next;
-    
+
     // 不存在
     if(sem_walker->next == NULL)
         return NULL;
@@ -103,22 +103,24 @@ int sys_sem_destroy(int semid)
 
 int sys_sem_wait(int semid)
 {
-    printk("sys sem wait...\n");
+    printk("sys sem wait, semid #%d...\n", semid);
     // 查找
     sem_t *sem_target = find_sem_prev(semid);
+    sem_target = sem_target->next;
+
+    if(sem_target)
+        printk("found sem #%d, value %d...\n", sem_target->sid, sem_target->value);
 
     // 不存在此id
-    if(find_sem_prev(semid) == NULL)
+    if(!sem_target)
         return -1;
-
-    sem_target = sem_target->next;
 
     --sem_target->value;
     if(sem_target->value < 0) // 阻塞
     {
         // 插入到队尾
         struct wait_queue *wq_runner = sem_target->sem_queue;
-        printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
+        // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
         
         do
         {
@@ -143,18 +145,18 @@ int sys_sem_wait(int semid)
 
         uint32_t flags;
         save_flags_cli(flags);
-        // printk("try block tid #%d...\n", sys_task_getid());
+        printk("try block tid #%d...\n", sys_task_getid());
         sleep_on(&(sem_target->sem_queue));  // 进程睡眠
         restore_flags(flags);
     }
     printk("unblock tid #%d...\n", sys_task_getid());
-    printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
+    // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
     return 0;
 }
 
 int sys_sem_signal(int semid)
 {
-    // printk("sys sem signal...\n");
+    printk("sys sem signal...\n");
     // 查找
     sem_t *sem_target = find_sem_prev(semid);
 
@@ -165,7 +167,7 @@ int sys_sem_signal(int semid)
     sem_target = sem_target->next;
     struct wait_queue *wq = sem_target->sem_queue;
 
-    // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
+    printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
     ++sem_target->value;
     if(sem_target->value <= 0) // 需要唤醒
     {
@@ -178,7 +180,7 @@ int sys_sem_signal(int semid)
         {
             wq_head = wq_head->next;
 
-            // printk("try signal tid #%d...\n", wake_target->tsk->tid);
+            printk("try signal tid #%d...\n", wake_target->tsk->tid);
             uint32_t flags;
             save_flags_cli(flags);
             wake_up(&wake_target, 1);
@@ -186,7 +188,7 @@ int sys_sem_signal(int semid)
         }
     }
     // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
-    // printk("singaled...\n");
+    printk("singaled...\n");
     return 0;
 }
 
