@@ -356,22 +356,20 @@ void task_producer(void *arg)
     while (true)
     {
         p(sem_empty);
-        // p(sem_mutex);
-
         sortAttributes *shellSortAttr = attrGenerator(&shellSort, loc % 2, loc % 8, 0);
         sortAttributes *mergeSortAttr = attrGenerator(&mergeSort, (loc + 1) % 2 , loc % 8 + 1, 0);
         
         drawLines(shellSortAttr->randNumber, BLOCK_HIGHT, loc % 8, 0, loc % 2);
         add2queue(shellSortAttr);
         v(sem_full);
-        
+
+        p(sem_empty);
         drawLines(mergeSortAttr->randNumber, BLOCK_HIGHT, loc % 8 + 1, 0, (loc + 1) % 2);
         add2queue(mergeSortAttr);
         v(sem_full);
         
         loc += 2;
-        // v(sem_mutex);
-        sleep(1);
+        // sleep(1);
     }
 }
 
@@ -379,17 +377,18 @@ void task_consumer(void *arg)
 {
     while(true)
     {
-        p(sem_full);
-        // p(sem_mutex);
+        for (int i = 0; i < 3; ++i)
+        {
+            p(sem_full);
+            sortAttributes *temp = removeHead();
+            
+            int tid = sortThreadRun(temp);
+            task_wait(tid, NULL);
+            
+            sortFree(temp);
+            v(sem_empty);
+        }
 
-        sortAttributes *temp = removeHead();
-        int tid = sortThreadRun(temp);
-        task_wait(tid, NULL);
-        sortFree(temp);
-        
-        sleep(1);
-        // v(sem_mutex);
-        v(sem_empty);
     }
 }
 
