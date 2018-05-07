@@ -47,30 +47,8 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
-    // for (int i = 0; i < 10; ++i)
-    //     sem_create(i);
 
-    // unsigned char *stack_signal, *stack_signal_again,*stack_wait, *stack_wait_again;
-    // unsigned int stack_size = 1024 * 1024;
-    // stack_signal = (unsigned char *)malloc(stack_size);
-    // stack_signal_again = (unsigned char *)malloc(stack_size);
-    // stack_wait = (unsigned char *)malloc(stack_size);
-    // stack_wait_again = (unsigned char *)malloc(stack_size);
-
-    // printf("task run...\n");
-    
-    // int tid_wait = task_create(stack_wait + stack_size, &task_sem_wait, (void *)0);
-    // int tid_wait_again = task_create(stack_wait_again + stack_size, &task_sem_wait, (void *)0);
-    // int tid_signal = task_create(stack_signal + stack_size, &task_sem_singal, (void *)0);
-    // int tid_signal_again = task_create(stack_signal_again + stack_size, &task_sem_singal, (void *)0);
-
-    // task_wait(tid_signal, NULL);
-    // task_wait(tid_signal_again, NULL);
-    // task_wait(tid_wait, NULL);
-    // task_wait(tid_wait_again, NULL);
-
-    // printf("done...\n");
-
+    // Lab3_Go();
     Lab4_Go();
 
     while (1)
@@ -155,7 +133,6 @@ void Lab2_Go()
     sortFree(bubbleColorAttr);
 
     sleep(100);
-    // refreshAll(0x000000);
     exit_graphic();
     printf("exited!");
 }
@@ -173,9 +150,6 @@ void Lab3_Go()
 
     int tid_bubble_left  = sortThreadRun(bubbleAttr_left);
     int tid_bubble_right = sortThreadRun(bubbleAttr_right);
-
-    // printf("left  %d\n", get_priority(tid_bubble_left));
-    // printf("right %d\n", get_priority(tid_bubble_right));
 
     int key = 0;
     int curr_left_nice  = -10;
@@ -242,8 +216,6 @@ void Lab3_Go()
             default:
                 continue;
         }
-        // printf("left  %d\n", get_priority(tid_bubble_left) - NZERO);
-        // printf("right %d\n", get_priority(tid_bubble_right) - NZERO);
     };
 
     task_wait(tid_bubble_left, NULL);
@@ -270,7 +242,7 @@ struct sortAttr_queue
 } sortAttr_queue;
 
 // 排序数量和链表头
-#define MAX_SORT 9
+#define MAX_SORT 8
 int sortAttrCnt;
 struct sortAttr_queue *sortAttr_queue_head;
 
@@ -292,19 +264,6 @@ void Lab4_Go()
     sem_full = sem_create(0);
     sem_mutex= sem_create(1);
 
-    // sortAttributes *bubbleSort = attrGenerator(&bubbleSort, 0, 0, 0);
-    // sortAttributes *insertSort = attrGenerator(&insertSort, 0, 1, 0);
-
-    // add2queue(bubbleSort);
-    // printf("add one...\n");
-    // add2queue(insertSort);
-    // printf("add one...\n");
-
-    // sortAttributes *test_bubble = removeHead();
-    // sortAttributes *test_insert = removeHead();
-    // printf("bubble : %d %d\n",test_bubble->sortFun, test_bubble->X_Location);
-    // printf("insert : %d %d\n",test_insert->sortFun, test_insert->X_Location);
-
     unsigned char *stack_producer, *stack_consumer;
     unsigned int stack_size = 1024 * 1024;
     stack_producer = (unsigned char *)malloc(stack_size);
@@ -313,52 +272,125 @@ void Lab4_Go()
     int tid_producer = task_create(stack_producer + stack_size, &task_producer, (void *)0);
     int tid_consumer = task_create(stack_consumer + stack_size, &task_consumer, (void *)0);
 
+    int curr_left_nice  = -10;
+    int curr_right_nice = 10;
+
+    set_priority(tid_producer, curr_left_nice + NZERO);
+    set_priority(tid_consumer, curr_right_nice + NZERO);
+
+    // 将屏幕竖直划分为40块，代表40级静态优先级
+    double levelHight = SCREEN_HIGHT / (2 * NZERO);
+
+    // 左边进度条X轴开始位置 和 右边进度条X轴结束位置
+    int left_start = SCREEN_WIDTH - BLOCK_WIDTH;
+    int right_end  = SCREEN_WIDTH;
+
+    uint32_t left_color = 0xffff6f;
+    uint32_t right_color = 0x2cff68;
+
+    // 画出进度条
+    refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
+                    SCREEN_WIDTH - BLOCK_WIDTH / 2, BLOCK_HIGHT, left_color);
+    refreshArea(right_end - BLOCK_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
+                    right_end, BLOCK_HIGHT, right_color);
+
+    int key = 0;
+    while((key = getchar()))
+    {
+        curr_left_nice  = get_priority(tid_producer) - NZERO;
+        curr_right_nice = get_priority(tid_consumer) - NZERO;
+
+        switch(key)
+        {
+            // UP键 减小nice值 调高左边进程优先级
+            case 0x4800:
+                curr_left_nice = (curr_left_nice <= -NZERO) ?
+                                        -NZERO : curr_left_nice - 1;
+                set_priority(tid_producer, curr_left_nice + NZERO);
+                refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
+                                left_start + BLOCK_WIDTH / 2, BLOCK_HIGHT, left_color);
+                break;
+            // DOWN键 增大nice值 调低左边进程优先级
+            case 0x5000:
+                curr_left_nice = (curr_left_nice >= NZERO - 1) ?
+                                        NZERO - 1 : curr_left_nice + 1;
+                set_priority(tid_producer, curr_left_nice + NZERO);
+                refreshArea(left_start, 0, left_start + BLOCK_WIDTH / 2,
+                                levelHight * (curr_left_nice + NZERO), 0x000000);
+                break;
+            // RIGHT键 减小nice值 调高右边进程优先级
+            case 0x4d00:
+                curr_right_nice = (curr_right_nice <= -NZERO) ?
+                                        -NZERO : curr_right_nice - 1;
+                set_priority(tid_consumer, curr_right_nice + NZERO);
+                refreshArea(right_end - BLOCK_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
+                                right_end, BLOCK_HIGHT, right_color);
+                break;
+            // LEFT键 增大nice值 调低右边进程优先级
+            case 0x4b00:
+                curr_right_nice = (curr_right_nice >= NZERO - 1) ?
+                                        NZERO - 1 : curr_right_nice + 1;
+                set_priority(tid_consumer, curr_right_nice + NZERO);
+                refreshArea(right_end - BLOCK_WIDTH / 2, 0, right_end,
+                                levelHight * (curr_right_nice + NZERO), 0x000000);
+                break;
+            default:
+                continue;
+        }
+    };
+
     task_wait(tid_producer, NULL);
     task_wait(tid_consumer, NULL);
 
+    free(stack_producer);
+    free(stack_consumer);
+
+    stack_producer = NULL;
+    stack_producer = NULL;
     return;
 }
 
 void task_producer(void *arg)
 {
-    static int loc = 0;
-    do 
+    int loc = 0;
+    while (true)
     {
         p(sem_empty);
-        p(sem_mutex);
+        // p(sem_mutex);
 
-        printf("produce one...\n");
-        sortAttributes *shellSortAttr = attrGenerator(&shellSort, 0, loc % 3, 0);
-        drawLines(shellSortAttr->randNumber, BLOCK_HIGHT, loc % 3, 0, 0);
-        ++loc;
+        sortAttributes *shellSortAttr = attrGenerator(&shellSort, loc % 2, loc % 8, 0);
+        sortAttributes *mergeSortAttr = attrGenerator(&mergeSort, (loc + 1) % 2 , loc % 8 + 1, 0);
+        
+        drawLines(shellSortAttr->randNumber, BLOCK_HIGHT, loc % 8, 0, loc % 2);
         add2queue(shellSortAttr);
-        // sleep(1);
-
-        v(sem_mutex);
         v(sem_full);
-    } while (true);
+        
+        drawLines(mergeSortAttr->randNumber, BLOCK_HIGHT, loc % 8 + 1, 0, (loc + 1) % 2);
+        add2queue(mergeSortAttr);
+        v(sem_full);
+        
+        loc += 2;
+        // v(sem_mutex);
+        sleep(1);
+    }
 }
 
 void task_consumer(void *arg)
 {
-    do
+    while(true)
     {
         p(sem_full);
-        p(sem_mutex);
+        // p(sem_mutex);
 
-        // printf("remove head...\n");
         sortAttributes *temp = removeHead();
         int tid = sortThreadRun(temp);
-
-        printf("consume one...\n");
-        printf("loc : %d\n", temp->X_Location);
-        // sleep(1);
-
-        v(sem_mutex);
+        task_wait(tid, NULL);
+        sortFree(temp);
+        
+        sleep(1);
+        // v(sem_mutex);
         v(sem_empty);
-
-
-    } while (true);
+    }
 }
 
 inline void add2queue(sortAttributes* attr)
@@ -377,7 +409,7 @@ inline void add2queue(sortAttributes* attr)
         attr_runner = attr_runner->next;
 
     attr_runner->next = malloc(sizeof(sortAttr_queue));
-    attr_runner = attr_runner ->next;
+    attr_runner = attr_runner->next;
     attr_runner->attr = attr;
     attr_runner->next = NULL;
 }
@@ -396,4 +428,5 @@ inline sortAttributes* removeHead()
 
     return attr;
 }
+
 // ----------------------------------------------------------------------------------------------------

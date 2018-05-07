@@ -36,7 +36,7 @@ typedef uint32_t COLORREF;
 #define SCREEN_WIDTH g_graphic_dev.XResolution
 #define SCREEN_HIGHT g_graphic_dev.YResolution
 
-#define X_DIVISION  3
+#define X_DIVISION  9
 #define Y_DIVISION  1
 
 #define BLOCK_WIDTH SCREEN_WIDTH / X_DIVISION
