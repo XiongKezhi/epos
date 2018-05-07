@@ -261,17 +261,18 @@ void Lab3_Go()
 // ----------------------------------------------------------------------------------------------------
 // 实验四 线程同步
  
-// 记录排序队列
+// 记录排序链表
+// 头结点不为空的链表
 struct sortAttr_queue
 {
     sortAttributes *attr;
     struct sortAttr_queue *next;
 } sortAttr_queue;
 
-// 排序数量和队列头
+// 排序数量和链表头
 #define MAX_SORT 9
-static int sortAttrCnt;
-static struct sortAttr_queue *sortAttr_queue_head;
+int sortAttrCnt;
+struct sortAttr_queue *sortAttr_queue_head;
 
 int sem_empty, sem_full, sem_mutex;
 
@@ -285,14 +286,24 @@ inline sortAttributes* removeHead();
 
 void Lab4_Go()
 {
-    // init_graphic(0x0180);
+    init_graphic(0x0180);
 
     sem_empty= sem_create(MAX_SORT);
     sem_full = sem_create(0);
     sem_mutex= sem_create(1);
 
-    // for (int i = 0; i < MAX_TASK;++i)
-    //     tid[i] = -1;
+    // sortAttributes *bubbleSort = attrGenerator(&bubbleSort, 0, 0, 0);
+    // sortAttributes *insertSort = attrGenerator(&insertSort, 0, 1, 0);
+
+    // add2queue(bubbleSort);
+    // printf("add one...\n");
+    // add2queue(insertSort);
+    // printf("add one...\n");
+
+    // sortAttributes *test_bubble = removeHead();
+    // sortAttributes *test_insert = removeHead();
+    // printf("bubble : %d %d\n",test_bubble->sortFun, test_bubble->X_Location);
+    // printf("insert : %d %d\n",test_insert->sortFun, test_insert->X_Location);
 
     unsigned char *stack_producer, *stack_consumer;
     unsigned int stack_size = 1024 * 1024;
@@ -304,19 +315,24 @@ void Lab4_Go()
 
     task_wait(tid_producer, NULL);
     task_wait(tid_consumer, NULL);
+
+    return;
 }
 
 void task_producer(void *arg)
 {
+    static int loc = 0;
     do 
     {
         p(sem_empty);
         p(sem_mutex);
 
         printf("produce one...\n");
-        ++sortAttrCnt;
-        printf("having %d...\n", sortAttrCnt);
-        sleep(1);
+        sortAttributes *shellSortAttr = attrGenerator(&shellSort, 0, loc % 3, 0);
+        drawLines(shellSortAttr->randNumber, BLOCK_HIGHT, loc % 3, 0, 0);
+        ++loc;
+        add2queue(shellSortAttr);
+        // sleep(1);
 
         v(sem_mutex);
         v(sem_full);
@@ -330,48 +346,47 @@ void task_consumer(void *arg)
         p(sem_full);
         p(sem_mutex);
 
+        // printf("remove head...\n");
+        sortAttributes *temp = removeHead();
+        int tid = sortThreadRun(temp);
+
         printf("consume one...\n");
-        --sortAttrCnt;
-        printf("left %d...\n", sortAttrCnt);
-        sleep(1);
+        printf("loc : %d\n", temp->X_Location);
+        // sleep(1);
 
         v(sem_mutex);
         v(sem_empty);
+
+
     } while (true);
 }
 
 inline void add2queue(sortAttributes* attr)
 {
-    // if(!sortAttr_queue_head)
-    // {
-    //     sortAttr_queue_head = attr;
-    //     sortAttr_queue_head->next = NULL;
-    //     return;
-    // }
-    // struct sortAttr_queue *attr_runner = sortAttr_queue_head;
-    // while(!attr_runner)
-    //     attr_runner = attr_runner->next;
-    // attr_runner = attr;
-    
-    struct sortAttr_queue *attr_runner = sortAttr_queue_head;
-    do
+    if(!sortAttr_queue_head)    // 第一次创建
     {
-        if(!attr_runner)    // 第一次创建
-        {
-            attr_runner = malloc(sizeof(sortAttr_queue));
-            attr_runner->attr = attr;
-            attr_runner->next = NULL;
-        }
+        sortAttr_queue_head = malloc(sizeof(sortAttr_queue));
+        sortAttr_queue_head->attr = attr;
+        sortAttr_queue_head->next = NULL;
+        return;
+    }
+
+    struct sortAttr_queue *attr_runner = sortAttr_queue_head;
+
+    while (attr_runner->next)
         attr_runner = attr_runner->next;
-    } while (!attr_runner);
 
-    attr_runner = attr;
-
-    return;
+    attr_runner->next = malloc(sizeof(sortAttr_queue));
+    attr_runner = attr_runner ->next;
+    attr_runner->attr = attr;
+    attr_runner->next = NULL;
 }
 
 inline sortAttributes* removeHead()
 {
+    if(sortAttr_queue_head==NULL)
+        return NULL;
+
     struct sortAttr_queue *head = sortAttr_queue_head;
     sortAttr_queue_head = sortAttr_queue_head->next;
 
