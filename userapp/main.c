@@ -48,7 +48,6 @@ void main(void *pv)
     //TODO: Your code goes here
     // list_graphic_modes();
 
-    // Lab3_Go();
     Lab4_Go();
 
     while (1)
@@ -140,6 +139,7 @@ void Lab2_Go()
 
 // ----------------------------------------------------------------------------------------------------
 // 实验三 线程调度
+
 // 需要将graphic.h中的X_DIVISION和Y_DIVISION宏定义更改为3和1
 void Lab3_Go()
 {
@@ -246,12 +246,14 @@ struct sortAttr_queue
 int sortAttrCnt;
 struct sortAttr_queue *sortAttr_queue_head;
 
+// 信号量
 int sem_empty, sem_full, sem_mutex;
 
 void task_producer(void *arg);
 void task_consumer(void *arg);
 inline void add2queue(sortAttributes* attr);
 inline sortAttributes* removeHead();
+extern void control_priority(int tid_left, int tid_right);
 
 #define p(x) sem_wait(x)
 #define v(x) sem_signal(x)
@@ -272,72 +274,7 @@ void Lab4_Go()
     int tid_producer = task_create(stack_producer + stack_size, &task_producer, (void *)0);
     int tid_consumer = task_create(stack_consumer + stack_size, &task_consumer, (void *)0);
 
-    int curr_left_nice  = -10;
-    int curr_right_nice = 10;
-
-    set_priority(tid_producer, curr_left_nice + NZERO);
-    set_priority(tid_consumer, curr_right_nice + NZERO);
-
-    // 将屏幕竖直划分为40块，代表40级静态优先级
-    double levelHight = SCREEN_HIGHT / (2 * NZERO);
-
-    // 左边进度条X轴开始位置 和 右边进度条X轴结束位置
-    int left_start = SCREEN_WIDTH - BLOCK_WIDTH;
-    int right_end  = SCREEN_WIDTH;
-
-    uint32_t left_color = 0xffff6f;
-    uint32_t right_color = 0x2cff68;
-
-    // 画出进度条
-    refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
-                    SCREEN_WIDTH - BLOCK_WIDTH / 2, BLOCK_HIGHT, left_color);
-    refreshArea(right_end - BLOCK_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
-                    right_end, BLOCK_HIGHT, right_color);
-
-    int key = 0;
-    while((key = getchar()))
-    {
-        curr_left_nice  = get_priority(tid_producer) - NZERO;
-        curr_right_nice = get_priority(tid_consumer) - NZERO;
-
-        switch(key)
-        {
-            // UP键 减小nice值 调高左边进程优先级
-            case 0x4800:
-                curr_left_nice = (curr_left_nice <= -NZERO) ?
-                                        -NZERO : curr_left_nice - 1;
-                set_priority(tid_producer, curr_left_nice + NZERO);
-                refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
-                                left_start + BLOCK_WIDTH / 2, BLOCK_HIGHT, left_color);
-                break;
-            // DOWN键 增大nice值 调低左边进程优先级
-            case 0x5000:
-                curr_left_nice = (curr_left_nice >= NZERO - 1) ?
-                                        NZERO - 1 : curr_left_nice + 1;
-                set_priority(tid_producer, curr_left_nice + NZERO);
-                refreshArea(left_start, 0, left_start + BLOCK_WIDTH / 2,
-                                levelHight * (curr_left_nice + NZERO), 0x000000);
-                break;
-            // RIGHT键 减小nice值 调高右边进程优先级
-            case 0x4d00:
-                curr_right_nice = (curr_right_nice <= -NZERO) ?
-                                        -NZERO : curr_right_nice - 1;
-                set_priority(tid_consumer, curr_right_nice + NZERO);
-                refreshArea(right_end - BLOCK_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
-                                right_end, BLOCK_HIGHT, right_color);
-                break;
-            // LEFT键 增大nice值 调低右边进程优先级
-            case 0x4b00:
-                curr_right_nice = (curr_right_nice >= NZERO - 1) ?
-                                        NZERO - 1 : curr_right_nice + 1;
-                set_priority(tid_consumer, curr_right_nice + NZERO);
-                refreshArea(right_end - BLOCK_WIDTH / 2, 0, right_end,
-                                levelHight * (curr_right_nice + NZERO), 0x000000);
-                break;
-            default:
-                continue;
-        }
-    };
+    control_priority(tid_producer, tid_consumer);
 
     task_wait(tid_producer, NULL);
     task_wait(tid_consumer, NULL);
@@ -428,4 +365,73 @@ inline sortAttributes* removeHead()
     return attr;
 }
 
+void control_priority(int tid_left, int tid_right)
+{
+    int curr_left_nice  = -10;
+    int curr_right_nice = 10;
+
+    set_priority(tid_left, curr_left_nice + NZERO);
+    set_priority(tid_right, curr_right_nice + NZERO);
+
+    // 将屏幕竖直划分为40块，代表40级静态优先级
+    double levelHight = SCREEN_HIGHT / (2 * NZERO);
+
+    // 左边进度条X轴开始位置 和 右边进度条X轴结束位置
+    int left_start = SCREEN_WIDTH - BLOCK_WIDTH;
+    int right_end  = SCREEN_WIDTH;
+
+    uint32_t left_color = 0xffff6f;
+    uint32_t right_color = 0x2cff68;
+
+    // 画出进度条
+    refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
+                    SCREEN_WIDTH - BLOCK_WIDTH / 2, BLOCK_HIGHT, left_color);
+    refreshArea(right_end - BLOCK_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
+                    right_end, BLOCK_HIGHT, right_color);
+
+    int key = 0;
+    while((key = getchar()))
+    {
+        curr_left_nice  = get_priority(tid_left) - NZERO;
+        curr_right_nice = get_priority(tid_right) - NZERO;
+
+        switch(key)
+        {
+            // UP键 减小nice值 调高左边进程优先级
+            case 0x4800:
+                curr_left_nice = (curr_left_nice <= -NZERO) ?
+                                        -NZERO : curr_left_nice - 1;
+                set_priority(tid_left, curr_left_nice + NZERO);
+                refreshArea(left_start, levelHight * (curr_left_nice + NZERO),
+                                left_start + BLOCK_WIDTH / 2, BLOCK_HIGHT, left_color);
+                break;
+            // DOWN键 增大nice值 调低左边进程优先级
+            case 0x5000:
+                curr_left_nice = (curr_left_nice >= NZERO - 1) ?
+                                        NZERO - 1 : curr_left_nice + 1;
+                set_priority(tid_left, curr_left_nice + NZERO);
+                refreshArea(left_start, 0, left_start + BLOCK_WIDTH / 2,
+                                levelHight * (curr_left_nice + NZERO), 0x000000);
+                break;
+            // RIGHT键 减小nice值 调高右边进程优先级
+            case 0x4d00:
+                curr_right_nice = (curr_right_nice <= -NZERO) ?
+                                        -NZERO : curr_right_nice - 1;
+                set_priority(tid_right, curr_right_nice + NZERO);
+                refreshArea(right_end - BLOCK_WIDTH / 2, levelHight * (curr_right_nice + NZERO),
+                                right_end, BLOCK_HIGHT, right_color);
+                break;
+            // LEFT键 增大nice值 调低右边进程优先级
+            case 0x4b00:
+                curr_right_nice = (curr_right_nice >= NZERO - 1) ?
+                                        NZERO - 1 : curr_right_nice + 1;
+                set_priority(tid_right, curr_right_nice + NZERO);
+                refreshArea(right_end - BLOCK_WIDTH / 2, 0, right_end,
+                                levelHight * (curr_right_nice + NZERO), 0x000000);
+                break;
+            default:
+                continue;
+        }
+    };
+}
 // ----------------------------------------------------------------------------------------------------
