@@ -284,6 +284,10 @@ void Lab4_Go()
 
     stack_producer = NULL;
     stack_producer = NULL;
+
+    sem_destroy(sem_empty);
+    sem_destroy(sem_full);
+    sem_destroy(sem_mutex);
     return;
 }
 
@@ -292,17 +296,21 @@ void task_producer(void *arg)
     int loc = 0;
     while (true)
     {
-        p(sem_empty);
         sortAttributes *shellSortAttr = attrGenerator(&shellSort, loc % 2, loc % 8, 0);
         sortAttributes *mergeSortAttr = attrGenerator(&mergeSort, (loc + 1) % 2 , loc % 8 + 1, 0);
-        
-        drawLines(shellSortAttr->randNumber, BLOCK_HIGHT, loc % 8, 0, loc % 2);
+
+        p(sem_empty);
+        p(sem_mutex);
         add2queue(shellSortAttr);
+        drawLines(shellSortAttr->randNumber, BLOCK_HIGHT, loc % 8, 0, loc % 2);
+        v(sem_mutex);
         v(sem_full);
 
         p(sem_empty);
-        drawLines(mergeSortAttr->randNumber, BLOCK_HIGHT, loc % 8 + 1, 0, (loc + 1) % 2);
+        p(sem_mutex);
         add2queue(mergeSortAttr);
+        drawLines(mergeSortAttr->randNumber, BLOCK_HIGHT, loc % 8 + 1, 0, (loc + 1) % 2);
+        v(sem_mutex);
         v(sem_full);
         
         loc += 2;
@@ -314,18 +322,16 @@ void task_consumer(void *arg)
 {
     while(true)
     {
-        for (int i = 0; i < 3; ++i)
-        {
-            p(sem_full);
-            sortAttributes *temp = removeHead();
-            
-            int tid = sortThreadRun(temp);
-            task_wait(tid, NULL);
-            
-            sortFree(temp);
-            v(sem_empty);
-        }
+        p(sem_full);
+        p(sem_mutex);
+        sortAttributes *temp = removeHead();
+        v(sem_mutex);
 
+        int tid = sortThreadRun(temp);
+        task_wait(tid, NULL);
+        sortFree(temp);
+        
+        v(sem_empty);
     }
 }
 
@@ -367,8 +373,8 @@ inline sortAttributes* removeHead()
 
 void control_priority(int tid_left, int tid_right)
 {
-    int curr_left_nice  = -10;
-    int curr_right_nice = 10;
+    int curr_left_nice  = 10;
+    int curr_right_nice = -10;
 
     set_priority(tid_left, curr_left_nice + NZERO);
     set_priority(tid_right, curr_right_nice + NZERO);

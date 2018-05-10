@@ -70,12 +70,15 @@ int sys_sem_create(int value)
     int id = 0;
     sem_t *sem_walker = sem_link_head;
 
+    uint32_t flags;
+    save_flags_cli(flags);
     // 遍历信号量链表 找到最后一个
     while(sem_walker->next) 
     {
         ++id;
         sem_walker = sem_walker->next;
     }
+    restore_flags(flags);
 
     // 给末尾的空节点赋值
     sem->sid = id;
@@ -92,13 +95,15 @@ int sys_sem_destroy(int semid)
     // 不存在此id
     if(find_sem_prev(semid) == NULL)
         return -1;
-    
+
+    uint32_t flags;
+    save_flags_cli(flags);
     // 保存要删除的结点，释放内存
     sem_t *sem_temp = sem_target->next;
     sem_target->next = sem_target->next->next;
     kfree(sem_temp);
-
     sem_temp = NULL;
+    restore_flags(flags);
 
     return 0;
 }
@@ -121,6 +126,8 @@ int sys_sem_wait(int semid)
         struct wait_queue *wq_runner = sem_target->sem_queue;
         // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
         
+        uint32_t flags;
+        save_flags_cli(flags);
         do
         {
             if(wq_runner)
@@ -130,8 +137,8 @@ int sys_sem_wait(int semid)
         wq_runner = kmalloc(sizeof(struct wait_queue));
         wq_runner->tsk = get_task(sys_task_getid());
         wq_runner->next = NULL;
+        restore_flags(flags);
 
-        uint32_t flags;
         // printk("try block tid #%d...\n", sys_task_getid());
         save_flags_cli(flags);
         sleep_on(&(sem_target->sem_queue));  // 进程睡眠
@@ -151,19 +158,20 @@ int sys_sem_signal(int semid)
     // 不存在此id
     if(find_sem_prev(semid) == NULL)
         return -1;
-
+    
+    uint32_t flags;
+    save_flags_cli(flags);
     sem_target = sem_target->next;
     struct wait_queue *wq = sem_target->sem_queue;
+    restore_flags(flags);
 
     ++sem_target->value;
     if(sem_target->value <= 0) // 需要唤醒
     {
        // printk("try signal tid #%d...\n", wake_target->tsk->tid);
-       uint32_t flags;
        save_flags_cli(flags);
        wake_up(&wq, 1);
        restore_flags(flags);
-        
     }
     // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
     // printk("singaled...\n");
