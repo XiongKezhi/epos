@@ -326,11 +326,11 @@ void task_consumer(void *arg)
         p(sem_mutex);
         sortAttributes *temp = removeHead();
         v(sem_mutex);
-
+        
         int tid = sortThreadRun(temp);
         task_wait(tid, NULL);
+        refreshArea(temp->X_Location * BLOCK_WIDTH, 0, (temp->X_Location + 1) * BLOCK_WIDTH, BLOCK_HIGHT, 0x000000);
         sortFree(temp);
-        
         v(sem_empty);
     }
 }
