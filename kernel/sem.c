@@ -67,7 +67,7 @@ int sys_sem_create(int value)
         sem_link_head->next = NULL;
     }
 
-    int id = 0;
+    int id = 1;
     sem_t *sem_walker = sem_link_head;
 
     uint32_t flags;

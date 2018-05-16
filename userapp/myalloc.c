@@ -32,13 +32,79 @@ void *tlsf_create_with_pool(uint8_t *heap_base, size_t heap_size)
     return NULL;
 }
 
+// 信号量
+#define NOT_USE 0
+int sem_mutex;
+
+#define p(x) sem_wait(x)
+#define v(x) sem_signal(x)
+
+// 首次适应
 void *malloc(size_t size)
 {
-    return NULL;
+    // printf("\nmalloc... sem_mutex:%d\n", sem_mutex);
+    if (sem_mutex == NOT_USE)
+      sem_mutex = sem_create(1);
+    // printf("create semaphore done... sem_mutex:%d\n", sem_mutex);
+
+    if (size == 0)
+      return NULL;
+
+    // 查找内存块
+    p(sem_mutex);
+    // printf("sem_wait...\n");
+    struct chunk *chunk_runner = chunk_head;
+    while (!chunk_runner)
+    {
+      if (chunk_runner->state == FREE && chunk_runner->size >= size)
+      {
+        chunk_runner->size = size;
+        chunk_runner->state = USED;
+
+        chunk_runner->next = chunk_runner + sizeof(struct chunk) + size;
+        chunk_runner->next->state = FREE;
+        strncpy(chunk_runner->next->signature, "OSEX", 4);
+
+        if (!chunk_runner->next)
+          chunk_runner->next->next = NULL;
+
+        break;
+      }
+      chunk_runner = chunk_runner->next;
+      }
+      v(sem_mutex);
+
+      printf("find done...\r\n");
+      return chunk_runner + sizeof(struct chunk);
 }
 
 void free(void *ptr)
 {
+    if(!ptr)
+      return;
+
+    // 释放内存
+    p(sem_mutex);
+    struct chunk *achunk=(struct chunk *)(((uint8_t *)ptr)-sizeof(struct chunk));
+    if(strcmp(achunk->signature, "OSEX"))
+      achunk->state = FREE;
+
+    // 合并空闲块
+    struct chunk *chunk_runner = chunk_head;
+    while(!chunk_runner)
+    {
+      if(!chunk_runner->next)
+        break;
+
+      if(chunk_runner->state == FREE && chunk_runner->next->state == FREE)
+      {
+        chunk_runner->size = chunk_runner->size + sizeof(struct chunk) + chunk_runner->next->size;
+        chunk_runner->next = chunk_runner->next->next;
+      }
+      chunk_runner = chunk_runner->next;
+    }
+    v(sem_mutex);
+    printf("free done...\n");
 }
 
 void *calloc(size_t num, size_t size)

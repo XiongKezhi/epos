@@ -47,8 +47,29 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
+    // test_allocator();
 
-    Lab4_Go();
+    struct chunk {
+        char signature[4];  /* "OSEX" */
+        struct chunk *next; /* ptr. to next chunk */
+        int state;          /* 0 - free, 1 - used */
+    #define FREE   0
+    #define USED   1
+
+        int size;           /* size of this chunk */
+    };
+
+    printf("Allocate huge block ...\r\n");
+    char *q = malloc(32*1024*1024-sizeof(struct chunk));
+    printf("malloc huge done...\r\n");
+    if (q == NULL) {
+        printf("FAILED\r\n");
+    }
+    q[32*1024*1024-sizeof(struct chunk)-1]=17;
+    printf("Free huge block ...\r\n");
+    free(q);
+    printf("free huge done...\r\n");
+    printf("PASSED\r\n");
 
     while (1)
         ;
@@ -260,7 +281,7 @@ extern void control_priority(int tid_left, int tid_right);
 
 void Lab4_Go()
 {
-    init_graphic(0x0180);
+    // init_graphic(0x0180);
 
     sem_empty= sem_create(MAX_SORT);
     sem_full = sem_create(0);
@@ -270,7 +291,7 @@ void Lab4_Go()
     unsigned int stack_size = 1024 * 1024;
     stack_producer = (unsigned char *)malloc(stack_size);
     stack_consumer = (unsigned char *)malloc(stack_size);
-    
+
     int tid_producer = task_create(stack_producer + stack_size, &task_producer, (void *)0);
     int tid_consumer = task_create(stack_consumer + stack_size, &task_consumer, (void *)0);
 
