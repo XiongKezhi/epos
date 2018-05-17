@@ -42,69 +42,114 @@ int sem_mutex;
 // 首次适应
 void *malloc(size_t size)
 {
-    // printf("\nmalloc... sem_mutex:%d\n", sem_mutex);
+    // printf("\r\n");
+
     if (sem_mutex == NOT_USE)
       sem_mutex = sem_create(1);
-    // printf("create semaphore done... sem_mutex:%d\n", sem_mutex);
-
     if (size == 0)
       return NULL;
 
     // 查找内存块
-    p(sem_mutex);
-    // printf("sem_wait...\n");
+    // p(sem_mutex);
     struct chunk *chunk_runner = chunk_head;
-    while (!chunk_runner)
+    // printf("chunk_head address: 0x%08X\r\n", chunk_head);
+    // printf("chunk_head size   : %d\r\n", chunk_head->size);
+    // printf("allocting size    : %d\r\n", size);
+    while (chunk_runner)
     {
       if (chunk_runner->state == FREE && chunk_runner->size >= size)
       {
+        // printf("find...\r\n");
+        // 若为最后一块
+        if (!chunk_runner->next)
+            chunk_runner->next = (struct chunk *)((uint8_t *)chunk_runner + sizeof(struct chunk) + size);
+
+        // printf("end address : 0x%08X\r\n", (uint8_t *)chunk_head + 32 * 1024 * 1024);
+        // printf("next address: 0x%08X\r\n", chunk_runner->next);
+        // 仍有空间留给下一块
+        if((uint8_t *)chunk_runner->next < (uint8_t *)chunk_head + (32 * 1024 * 1024))
+        {
+          // printf("set...\r\n");
+          chunk_runner->next->state = FREE;
+          chunk_runner->next->size = chunk_runner->size - sizeof(struct chunk) - size;
+          chunk_runner->next->next = NULL;
+          strncpy(chunk_runner->next->signature, "OSEX", 4);
+        }
+        // printf("done...\r\n");
         chunk_runner->size = size;
         chunk_runner->state = USED;
-
-        chunk_runner->next = chunk_runner + sizeof(struct chunk) + size;
-        chunk_runner->next->state = FREE;
-        strncpy(chunk_runner->next->signature, "OSEX", 4);
-
-        if (!chunk_runner->next)
-          chunk_runner->next->next = NULL;
-
+        strncpy(chunk_runner->signature, "OSEX", 4);
+        // printf("done...\r\n");
         break;
       }
       chunk_runner = chunk_runner->next;
-      }
-      v(sem_mutex);
+      // printf("next...\r\n");
+    }
+    // v(sem_mutex);
 
-      printf("find done...\r\n");
-      return chunk_runner + sizeof(struct chunk);
+    // int i = 0;
+    // struct chunk* chunk_test = chunk_head;
+    // while (chunk_test)
+    // {
+    //   printf("#%d status: %d\t size: %d\r\n", i,chunk_test->state, chunk_test->size);
+    //   chunk_test = chunk_test->next;
+    // }
+
+    // printf("address:      0x%08X\r\n", chunk_runner);
+    // printf("delta size:   0x%08X\r\n", sizeof(struct chunk) + size);
+    // printf("next address: 0x%08X\r\n", chunk_runner->next);
+    return (uint8_t *)chunk_runner + sizeof(struct chunk);
 }
 
 void free(void *ptr)
 {
+    // printf("\r\n");
     if(!ptr)
       return;
 
     // 释放内存
-    p(sem_mutex);
+    // p(sem_mutex);
     struct chunk *achunk=(struct chunk *)(((uint8_t *)ptr)-sizeof(struct chunk));
     if(strcmp(achunk->signature, "OSEX"))
       achunk->state = FREE;
 
+    // printf("achunk:\t0x%08X\r\n", achunk);
+
     // 合并空闲块
     struct chunk *chunk_runner = chunk_head;
-    while(!chunk_runner)
+    while(chunk_runner)
     {
-      if(!chunk_runner->next)
-        break;
+      // printf("status: %d\t size: %d\r\n",chunk_runner->state, chunk_runner->size);
+      if (!chunk_runner->next ||
+        (uint8_t *)chunk_runner->next == (uint8_t *)chunk_head + (32 * 1024 * 1024))
+          break;
 
-      if(chunk_runner->state == FREE && chunk_runner->next->state == FREE)
+      if (chunk_runner->state == FREE && chunk_runner->next->state == FREE)
       {
+        // printf("size:       0x%08X\r\n", chunk_runner);
+        // printf("delta size: 0x%08X\r\n", sizeof(struct chunk) + chunk_runner->next->size);
+        
         chunk_runner->size = chunk_runner->size + sizeof(struct chunk) + chunk_runner->next->size;
+        // printf("merged size:0x%08X\r\n", chunk_runner->size);
+
         chunk_runner->next = chunk_runner->next->next;
+        // printf("again...\r\n");
       }
-      chunk_runner = chunk_runner->next;
+      else
+      {
+        chunk_runner = chunk_runner->next;
+        // printf("next...\r\n");
+      }
     }
-    v(sem_mutex);
-    printf("free done...\n");
+    // v(sem_mutex);
+
+    // int i = 0;
+    // chunk_runner = chunk_head;
+    // while (chunk_runner)
+    // {
+    //   printf("#%d status: %d\t size: %d signature: %s\r\n", i,chunk_runner->state, chunk_runner->size, chunk_runner->signature);
+    //   chunk_runner = chunk_runner->next;
+    // }
 }
 
 void *calloc(size_t num, size_t size)

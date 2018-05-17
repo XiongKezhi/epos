@@ -47,29 +47,35 @@ void main(void *pv)
 
     //TODO: Your code goes here
     // list_graphic_modes();
-    // test_allocator();
+    test_allocator();
 
-    struct chunk {
-        char signature[4];  /* "OSEX" */
-        struct chunk *next; /* ptr. to next chunk */
-        int state;          /* 0 - free, 1 - used */
-    #define FREE   0
-    #define USED   1
+    // void * ptr1 = malloc(1);
+    // void * ptr2 = malloc(2);
+    // void * ptr3 = malloc(3);
 
-        int size;           /* size of this chunk */
-    };
+    // printf("\r\n");
+    // printf("ptr: 0x%08X\r\n",ptr1);
+    // printf("ptr: 0x%08X\r\n",ptr2);
+    // printf("ptr: 0x%08X\r\n",ptr3);
 
-    printf("Allocate huge block ...\r\n");
-    char *q = malloc(32*1024*1024-sizeof(struct chunk));
-    printf("malloc huge done...\r\n");
-    if (q == NULL) {
-        printf("FAILED\r\n");
-    }
-    q[32*1024*1024-sizeof(struct chunk)-1]=17;
-    printf("Free huge block ...\r\n");
-    free(q);
-    printf("free huge done...\r\n");
-    printf("PASSED\r\n");
+    // free(ptr1);
+    // free(ptr2);
+    // free(ptr3);
+
+    // struct chunk{
+    //     char a[16];
+    // };
+
+    // char *q = malloc(32*1024*1024-sizeof(struct chunk));
+    // if (q == NULL) {
+    //   printf("FAILED\r\n");
+    // 	return;
+    // }
+    // printf("malloc done...\r\n");
+    // q[32*1024*1024-sizeof(struct chunk)-1]=17;
+    // printf("sign done...\r\n");
+    // free(q);
+    // printf("PASSED\r\n");
 
     while (1)
         ;
