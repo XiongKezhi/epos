@@ -37,6 +37,9 @@ void __main()
 	g_heap = tlsf_create_with_pool(heap_base, heap_size);
 }
 
+#define _SC_PAGESIZE            0x0027
+long sysconf(int sc);
+
 /**
  * 第一个运行在用户模式的线程所执行的函数
  */
@@ -48,35 +51,7 @@ void main(void *pv)
     //TODO: Your code goes here
     // list_graphic_modes();
     test_allocator();
-
-    // void * ptr1 = malloc(1);
-    // void * ptr2 = malloc(2);
-    // void * ptr3 = malloc(3);
-
-    // printf("\r\n");
-    // printf("ptr: 0x%08X\r\n",ptr1);
-    // printf("ptr: 0x%08X\r\n",ptr2);
-    // printf("ptr: 0x%08X\r\n",ptr3);
-
-    // free(ptr1);
-    // free(ptr2);
-    // free(ptr3);
-
-    // struct chunk{
-    //     char a[16];
-    // };
-
-    // char *q = malloc(32*1024*1024-sizeof(struct chunk));
-    // if (q == NULL) {
-    //   printf("FAILED\r\n");
-    // 	return;
-    // }
-    // printf("malloc done...\r\n");
-    // q[32*1024*1024-sizeof(struct chunk)-1]=17;
-    // printf("sign done...\r\n");
-    // free(q);
-    // printf("PASSED\r\n");
-
+    
     while (1)
         ;
     task_exit(0);
