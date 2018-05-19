@@ -33,22 +33,42 @@ void *tlsf_create_with_pool(uint8_t *heap_base, size_t heap_size)
     return NULL;
 }
 
-// 信号量
-#define NOT_USE 0
-int sem_mutex;
+void test()
+{
+    int i = 0;
+    struct chunk *chunk_runner=chunk_head;
+    printf("\r\n");
+    while(chunk_runner)
+    {
+        printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
+        chunk_runner = chunk_runner->next;
+        i++;
+    }
+}
 
+// 线程安全
 #define p(x) sem_wait(x)
 #define v(x) sem_signal(x)
+
+#define NOT_CREATE 0
+int sem_mutex = NOT_CREATE;
+
+int get_sem()
+{
+  if(sem_mutex == NOT_CREATE)
+    sem_mutex = sem_create(1);
+
+  return sem_mutex;
+}
 
 // 首次适应
 void *malloc(size_t size)
 {
-    if (sem_mutex == NOT_USE)
-      sem_mutex = sem_create(1);
-    
     if (size == 0)
       return NULL;
-    
+
+    get_sem();
+    p(sem_mutex);
     // 查找内存块
     struct chunk *chunk_runner = chunk_head;
     while (chunk_runner)
@@ -79,6 +99,7 @@ void *malloc(size_t size)
         }
       chunk_runner = chunk_runner->next;
     }
+    v(sem_mutex);
 
     return (void *)((uint8_t *)chunk_runner + CHUNK_SIZE);
 }
@@ -87,13 +108,16 @@ void free(void *ptr)
 {
     if(!ptr)
       return;
-
+    
+    get_sem();
+    p(sem_mutex);
     // 释放内存
-    // p(sem_mutex);
     struct chunk *achunk=(struct chunk *)(((uint8_t *)ptr)-CHUNK_SIZE);
     if(strncmp(achunk->signature, "OSEX", 4) == 0)
       achunk->state = FREE;
+    v(sem_mutex);
 
+    p(sem_mutex);
     // 合并空闲块
     struct chunk *chunk_runner = chunk_head;
     while(chunk_runner)
@@ -109,19 +133,32 @@ void free(void *ptr)
       else
         chunk_runner = chunk_runner->next;
     }
-    // v(sem_mutex);
+    v(sem_mutex);
 }
 
 void *calloc(size_t num, size_t size)
 {
-    void* ptr = malloc(num * size);
+    uint8_t* ptr = malloc(num * size);
     memset(ptr, 0, num * size);
-    return ptr;
+    return (void *)ptr;
 }
 
 void *realloc(void *oldptr, size_t size)
 {
-    return NULL;
+    if(!oldptr)
+      return malloc(size);
+    
+    if(size == 0)
+    {
+      free(oldptr);
+      return NULL;
+    }
+
+    free(oldptr);
+    uint8_t *newptr = malloc(size);
+    memcpy(newptr, oldptr, ((struct chunk *)((uint8_t *)oldptr - CHUNK_SIZE))->size);
+
+    return newptr;
 }
 
 /*************D O  N O T  T O U C H  A N Y T H I N G  B E L O W*************/

@@ -168,7 +168,6 @@ int sys_sem_signal(int semid)
     ++sem_target->value;
     if(sem_target->value <= 0) // 需要唤醒
     {
-       // printk("try signal tid #%d...\n", wake_target->tsk->tid);
        save_flags_cli(flags);
        wake_up(&wq, 1);
        restore_flags(flags);

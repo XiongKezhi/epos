@@ -53,7 +53,7 @@ void main(void *pv)
     test_allocator();
     
     while (1)
-        ;
+          ;
     task_exit(0);
 }
 
