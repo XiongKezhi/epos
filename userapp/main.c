@@ -40,6 +40,52 @@ void __main()
 #define _SC_PAGESIZE            0x0027
 long sysconf(int sc);
 
+// ------------------------------------------------------
+struct chunk {
+    char signature[4];  /* "OSEX" */
+    struct chunk *next; /* ptr. to next chunk */
+    int state;          /* 0 - free, 1 - used */
+#define FREE   0
+#define USED   1
+
+    int size;           /* size of this chunk */
+};
+static struct chunk *chunk_head = (struct chunk *)0x8053000;
+void test()
+{
+    int i = 0;
+    struct chunk *chunk_runner=chunk_head;
+    while(chunk_runner)
+    {
+        printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
+        chunk_runner = chunk_runner->next;
+        i++;
+    }
+}
+static void tsk_malloc(void *pv)
+{
+//   printf("tsk malloc...\n"); 
+//   test();
+//   sleep(5);
+//   printf("test done...\n");
+  int i, c = (int)pv;
+  char **a = malloc(c*sizeof(char *));
+//   test();
+//   sleep(5);
+  for(i = 0; i < c; i++) {
+	  a[i]=malloc(i+1);
+	  a[i][i]=17;
+  }
+  printf("malloc done...\n");
+//   test();
+//   sleep(5);
+  for(i = 0; i < c; i++) {
+	  free(a[i]);
+  }
+  free(a);
+
+  task_exit(0);
+}
 /**
  * 第一个运行在用户模式的线程所执行的函数
  */
@@ -51,7 +97,30 @@ void main(void *pv)
     //TODO: Your code goes here
     // list_graphic_modes();
     test_allocator();
-    
+
+//     printf("Test malloc/free for thread-safe ...\n");
+
+//     int t1, t2;
+//     char *s1 = malloc(1024 * 1024),
+//          *s2 = malloc(1024 * 1024);
+
+//     t1 = task_create(s1 + 1024 * 1024, tsk_malloc, (void *)5000);
+//     t2 = task_create(s2 + 1024 * 1024, tsk_malloc, (void *)5000);
+//     printf("create done...\n");
+
+//     task_wait(t1, NULL);
+//     task_wait(t2, NULL);
+
+//     free(s1);
+//     free(s2);
+
+// if (chunk_head->next != NULL || chunk_head->size != 32 * 1024 * 1024)
+// 	printf("FAILED\r\n");
+// else
+//     printf("PASSED\r\n");
+
+//     test();
+
     while (1)
           ;
     task_exit(0);

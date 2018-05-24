@@ -33,18 +33,18 @@ void *tlsf_create_with_pool(uint8_t *heap_base, size_t heap_size)
     return NULL;
 }
 
-void test()
-{
-    int i = 0;
-    struct chunk *chunk_runner=chunk_head;
-    printf("\r\n");
-    while(chunk_runner)
-    {
-        printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
-        chunk_runner = chunk_runner->next;
-        i++;
-    }
-}
+// void test()
+// {
+//     int i = 0;
+//     struct chunk *chunk_runner=chunk_head;
+//     printf("\r\n");
+//     while(chunk_runner)
+//     {
+//         printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
+//         chunk_runner = chunk_runner->next;
+//         i++;
+//     }
+// }
 
 // 线程安全
 #define p(x) sem_wait(x)
@@ -67,8 +67,9 @@ void *malloc(size_t size)
     if (size == 0)
       return NULL;
 
-    get_sem();
+    int sem_mutex = get_sem();
     p(sem_mutex);
+
     // 查找内存块
     struct chunk *chunk_runner = chunk_head;
     while (chunk_runner)
@@ -101,6 +102,10 @@ void *malloc(size_t size)
     }
     v(sem_mutex);
 
+    // static int i = 0;
+    // printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i++, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
+    // sleep(5);
+
     return (void *)((uint8_t *)chunk_runner + CHUNK_SIZE);
 }
 
@@ -108,16 +113,15 @@ void free(void *ptr)
 {
     if(!ptr)
       return;
-    
-    get_sem();
+
+    int sem_mutex = get_sem();
     p(sem_mutex);
+
     // 释放内存
     struct chunk *achunk=(struct chunk *)(((uint8_t *)ptr)-CHUNK_SIZE);
     if(strncmp(achunk->signature, "OSEX", 4) == 0)
       achunk->state = FREE;
-    v(sem_mutex);
 
-    p(sem_mutex);
     // 合并空闲块
     struct chunk *chunk_runner = chunk_head;
     while(chunk_runner)
