@@ -17,14 +17,14 @@ typedef struct semaphore_type
 static sem_t *sem_link_head;
 
 // 测试用遍历输出
-// static void test_and_see()
-// {
-//     int count = 0;
-//     for (sem_t *runner = sem_link_head; runner != NULL; 
-//             runner = runner->next, ++count)
-//         printk("sem: id #%d\tvalue: %d\t\n", runner->sid, runner->value);
-//     printk("total :%d\n", count - 1);
-// }
+static void test_and_see()
+{
+    int count = 0;
+    for (sem_t *runner = sem_link_head; runner != NULL; 
+            runner = runner->next, ++count)
+        printk("sem: id #%d\tvalue: %d\t\n", runner->sid, runner->value);
+    printk("total :%d\n", count - 1);
+}
 
 // 按信号量id查找目标信号量的上一个
 static inline
@@ -115,7 +115,6 @@ int sys_sem_destroy(int semid)
 
 int sys_sem_wait(int semid)
 {
-    // printk("sys sem wait, semid #%d...\n", semid);
     // 查找
     sem_t *sem_target = find_sem_prev(semid);
     sem_target = sem_target->next;
@@ -131,15 +130,11 @@ int sys_sem_wait(int semid)
         sleep_on(&(sem_target->sem_queue));  // 进程睡眠
     restore_flags(flags);
 
-    // printk("unblock tid #%d...\n", sys_task_getid());
-    // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
-
     return 0;
 }
 
 int sys_sem_signal(int semid)
 {
-    // printk("sys sem signal, semid %d...\n", semid);
     // 查找
     sem_t *sem_target = find_sem_prev(semid);
 
@@ -158,8 +153,5 @@ int sys_sem_signal(int semid)
     restore_flags(flags);
     
     return 0;
-    
-    // printk("sem: id #%d  value %d\n", sem_target->sid, sem_target->value);
-    // printk("singaled...\n");
 }
 

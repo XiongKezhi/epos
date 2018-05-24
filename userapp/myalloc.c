@@ -33,18 +33,17 @@ void *tlsf_create_with_pool(uint8_t *heap_base, size_t heap_size)
     return NULL;
 }
 
-// void test()
-// {
-//     int i = 0;
-//     struct chunk *chunk_runner=chunk_head;
-//     printf("\r\n");
-//     while(chunk_runner)
-//     {
-//         printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
-//         chunk_runner = chunk_runner->next;
-//         i++;
-//     }
-// }
+void test()
+{
+    int i = 0;
+    struct chunk *chunk_runner=chunk_head;
+    printf("\r\n");
+    while(chunk_runner)
+    {
+        printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i++, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
+        chunk_runner = chunk_runner->next;
+    }
+}
 
 // 线程安全
 #define p(x) sem_wait(x)
@@ -79,32 +78,28 @@ void *malloc(size_t size)
             if(size == chunk_runner->size - CHUNK_SIZE)
             {
               chunk_runner->state = USED;
-              strncpy(chunk_runner->next->signature, "OSEX", 4);
               break;
             }
-            else if(size < chunk_runner->size - CHUNK_SIZE)
+            else if(size <= (chunk_runner->size - 2 * CHUNK_SIZE))
             {
-                uint8_t *old_next = (uint8_t *)chunk_runner->next;
-                
-                chunk_runner->next = (struct chunk *)((uint8_t *)chunk_runner + CHUNK_SIZE + size);
-                chunk_runner->next->state = FREE;
-                chunk_runner->next->size = chunk_runner->size - CHUNK_SIZE - size;
-                chunk_runner->next->next = (struct chunk *)old_next;
-                strncpy(chunk_runner->next->signature, "OSEX", 4);
+                struct chunk *old_next = chunk_runner->next;
+                int old_size = chunk_runner->size;
 
                 chunk_runner->state = USED;
-                chunk_runner->size = size;
+                chunk_runner->size = size + CHUNK_SIZE;
+                chunk_runner->next = (struct chunk *)((uint8_t *)chunk_runner + CHUNK_SIZE + size);
+                strncpy(chunk_runner->signature, "OSEX", 4);
 
+                chunk_runner->next->state = FREE;
+                chunk_runner->next->size = old_size - CHUNK_SIZE - size;
+                chunk_runner->next->next = old_next;
+                strncpy(chunk_runner->next->signature, "OSEX", 4);
                 break;
             }
         }
       chunk_runner = chunk_runner->next;
     }
     v(sem_mutex);
-
-    // static int i = 0;
-    // printf("#%d\tstate:%d\taddress:0x%08X\tnext:0x%08X\tsize:%d\r\n", i++, chunk_runner->state, chunk_runner, chunk_runner->next, chunk_runner->size);
-    // sleep(5);
 
     return (void *)((uint8_t *)chunk_runner + CHUNK_SIZE);
 }
@@ -114,30 +109,30 @@ void free(void *ptr)
     if(!ptr)
       return;
 
-    int sem_mutex = get_sem();
-    p(sem_mutex);
-
     // 释放内存
     struct chunk *achunk=(struct chunk *)(((uint8_t *)ptr)-CHUNK_SIZE);
     if(strncmp(achunk->signature, "OSEX", 4) == 0)
       achunk->state = FREE;
 
     // 合并空闲块
+    int i=0;
     struct chunk *chunk_runner = chunk_head;
     while(chunk_runner)
     {
       if (!chunk_runner->next)
         break;
-
+      
       if (chunk_runner->state == FREE && chunk_runner->next->state == FREE)
       {
-        chunk_runner->size += CHUNK_SIZE + chunk_runner->next->size;
+        chunk_runner->size = chunk_runner->size + chunk_runner->next->size;
         chunk_runner->next = chunk_runner->next->next;
       }
       else
+      {
         chunk_runner = chunk_runner->next;
+      }
+      i++;
     }
-    v(sem_mutex);
 }
 
 void *calloc(size_t num, size_t size)
